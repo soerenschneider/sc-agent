@@ -1,0 +1,48 @@
+---
+name: openapi spec
+
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+
+jobs:
+  spectral-linter:
+    name: Run Spectral
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.0
+
+      - uses: actions/setup-node@v4.0.3
+
+      - name: Install Spectral
+        run: npm install -g @stoplight/spectral-cli
+
+      - name: Lint OpenAPI spec
+        run: spectral lint --fail-on-unmatched-globs  --fail-severity info --verbose --ruleset .spectral.yaml openapi.yaml
+
+  codegenerator-diff:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4.1.0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
+
+    - name: Run make generate
+      run: make generate
+
+    - name: Check for differences
+      run: |
+        if [[ -n $(git status --porcelain) ]]; then
+          echo "Changes in OpenAPI spec detected"
+          git diff
+          exit 1
+        else
+          echo "No changes detected"
+        fi

@@ -1,0 +1,1518 @@
+---
+openapi: "3.0.3"
+info:
+  title: sc-agent
+  description: API to interact with sc-agent
+  version: 1.0.0
+  contact:
+    name: soeren schneider
+    url: https://github.com/soerenschneider/sc-agent
+    email: "56670304+soerenschneider@users.noreply.github.com" # this is just for linting reasons
+  license:
+    name: "NONE" # this is just for linting reasons
+    url: "none" # this is just for linting reasons
+
+servers:
+  - url: http://localhost:9999
+    description: Local server
+
+tags:
+  - name: acme
+    description: Tag for acme related endpoints
+  - name: certs
+    description: Tag for certs related endpoints
+  - name: info
+    description: Meta information about the instance
+  - name: k0s
+    description: Tag for k0s related endpoints
+  - name: libvirt
+    description: Tag for libvirt related endpoints
+  - name: packages
+    description: Tag for packages related endpoints
+  - name: pki
+    description: Tag for PKI related endpoints
+  - name: secrets
+    description: Tag for secret syncer related endpoints
+  - name: services
+    description: Tag for service related endpoints
+  - name: ssh
+    description: Tag for SSH related endpoints
+  - name: power
+    description: Tag for power-state related endpoints
+  - name: wol
+    description: Tag for Wake-on-LAN (WOL) related endpoints
+  - name: x509
+    description: Tag for x509 related endpoints
+
+paths:
+  /v1/certs/acme:
+    get:
+      operationId: certsAcmeGetCertificates
+      summary: "Returns current configuration"
+      description: Returns the current configuration of the secret replication component.
+      tags:
+        - acme
+        - certs
+      responses:
+        '200':
+          description: The current configuration of the secret syncer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcmeManagedCertificateList"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/certs/acme/{id}:
+    get:
+      operationId: certsAcmeGetCertificate
+      summary: "Returns the replication status of a single item"
+      description: >
+        Returns the replication status of a single secret replication item. The id of the item is passed via path
+        variable.
+      tags:
+        - acme
+        - certs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "prod/db"
+          description: The id which translates to the secret path of the to-be-synced item in Vault.
+      responses:
+        '200':
+          description: Object containing the status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcmeManagedCertificate"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/certs/ssh:
+    get:
+      operationId: certsSshGetCertificates
+      summary: Get the configuration of all managed ssh certificates
+      description: >
+        Returns a list of all configured managed ssh certificates.
+      tags:
+        - certs
+        - ssh
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - user
+              - host
+          example: "user"
+          description: Specifies whether to return cert of type user or host. See Vault documentation.
+      responses:
+        '200':
+          description: Object that contains the list of all configured certs
+          content:
+            application/json:
+              schema:
+                type: array
+                x-go-type-skip-optional-pointer: true
+                items:
+                  $ref: '#/components/schemas/SshManagedCertificatesList'
+                description: Array holding conf
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/certs/ssh/{id}:
+    get:
+      operationId: certsSshGetCertificate
+      summary: Get the configuration of a single managed ssh certificate
+      description: >
+        Returns the configuration of a managed ssh certificates for a given id. The parameter id is supplied via path.
+      tags:
+        - certs
+        - ssh
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "my-host-cert"
+          description: The id of the SSH certificate you want to retrieve information for
+      responses:
+        '200':
+          description: Configuration of the managed ssh certificate.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SshManagedCertificate"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/certs/ssh/issue-requests:
+    post:
+      operationId: certsSshPostIssueRequests
+      summary: Sign a SSH public key
+      description: >
+        Signs a SSH public key and writes the signature to a file. The appropriate public key is picked from the configuration and is passed via path parameter. The public key is only signed if 
+        a signature does not exist already or if the configured threshold of the remaining lifetime is exceeded.
+      tags:
+        - certs
+        - ssh
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "my-user-cert"
+          description: The id of the SSH host certificate you want to sign
+        - name: force-renewal
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Do not check the lifetime of the existing certificate against the threshold and force a new signature of the host key
+      responses:
+        '200':
+          description: Certificate already exists and is still valid, no new signature was needed
+        '201':
+          description: New signature created, either because certificate did not exist, was expired, was below the lifetime threshold or because force_renewal was set to true.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/certs/x509/issue-requests:
+    post:
+      operationId: certsX509PostIssueRequests
+      summary: Issues a X509 certificate
+      description: Issues a X509 certificate
+      tags:
+        - certs
+        - x509
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "my-user-cert"
+          description: The id of the SSH host certificate you want to sign
+        - name: force-renewal
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Do not check the lifetime of the existing certificate against the threshold and force a new signature of the host key
+      responses:
+        '200':
+          description: Certificate already exists and is still valid, no new signature was needed
+        '201':
+          description: New signature created, either because certificate did not exist, was expired, was below the lifetime threshold or because force_renewal was set to true.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/certs/x509:
+    get:
+      operationId: certsX509GetCertificatesList
+      summary: Return configuration of all managed x509 certificates
+      description: >
+        Returns a list of all configured managed x509 certificates.
+      tags:
+        - certs
+        - x509
+      responses:
+        '200':
+          description: Configuration of all managed x509 certificates
+          content:
+            application/json:
+              schema:
+                type: array
+                x-go-type-skip-optional-pointer: true
+                items:
+                  $ref: '#/components/schemas/X509ManagedCertificateList'
+                description: List of managed certificate configs
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/certs/x509/{id}:
+    get:
+      operationId: certsX509GetCertificate
+      summary: Returns info of configured managed x509 certificate
+      description: Accepts the id of the configured managed x509 certificate as path parameter and returns its config.
+      tags:
+        - certs
+        - x509
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "my-id"
+          description: The id of the managed x509 certificate you want to retrieve configuration for
+      responses:
+        '200':
+          description: Info about the managed x509 cert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/X509ManagedCertificate"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/info/components:
+    get:
+      operationId: infoGetComponents
+      summary: Returns all enabled components
+      description: >
+        A list of the components that are enabled on this instance
+      tags:
+        - info
+      responses:
+        '200':
+          description: List of all enabled components
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InfoComponents"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/k0s/actions:
+    post:
+      operationId: k0sPostAction
+      summary: Start k0s
+      description: Start the k0s service.
+      tags:
+        - k0s
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - stop
+              - start
+          example: "stop"
+          description: Action to perform for the k0s service
+      responses:
+        '200':
+          description: Command to start k0s was invoked successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/packages/installed:
+    get:
+      operationId: packagesInstalledGet
+      summary: Lists installed packages
+      description: List all installed packages that are installed via the system's package manager.
+      tags:
+        - packages
+      responses:
+        '200':
+          description: A list of packages installed via DNF/RPM on the system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackagesInstalled'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/packages/updates:
+    get:
+      operationId: packagesUpdatesGet
+      summary: Checks for updates
+      description: Checks if any packages are updateable via DNF
+      tags:
+        - packages
+      responses:
+        '200':
+          description: Returns whether updates are available for packages installed via DNF
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackageUpdates'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/packages/upgrade-requests:
+    post:
+      operationId: packagesUpgradeRequestsPost
+      summary: Upgrades all packages
+      description: Upgrades all packages with the default package manager. It is not recommend to use this endpoint on a regular basis.
+      tags:
+        - packages
+      responses:
+        '200':
+          description: Upgrade was successful
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/libvirt/domains/{domain}:
+    post:
+      operationId: libvirtPostDomainAction
+      summary: Set status of libvirt domain
+      description: >
+        Interact with the status of a libvirt domain running on the machine the API runs on. Both domain name and
+        action are set as path variable.
+      tags:
+        - libvirt
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The name of the domain you want to shutdown
+          example: example-domain
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - reboot
+              - shutdown
+              - start
+          example: reboot
+          description: Action to perform for the libvirt domain
+      responses:
+        '200':
+          description: Domain shutdown successful
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/power-state/conditional-reboot:
+    put:
+      operationId: powerConditionalRebootPostStatus
+      summary: Unpause reboot status
+      description: Set the pause status of the conditional reboot service
+      tags:
+        - power
+      parameters:
+        - name: "action"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+            enum:
+              - "pause"
+              - "unpause"
+          example: "pause"
+          description: Action to perform for the conditional-reboot service
+      responses:
+        '200':
+          description: Reboot status unpaused
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/power-state/conditional-reboot/status:
+    get:
+      operationId: powerConditionalRebootGetStatus
+      summary: Get reboot status
+      description: Return the current reboot status.
+      tags:
+        - power
+      responses:
+        '200':
+          description: Reboot status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: paused
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/power-state:
+    post:
+      operationId: powerPostAction
+      summary: Directly interact with the power status of the system
+      description: >
+        Send an action to the local system that either tries to shutdown or reboot the machine this API is running on.
+        The appropriate action is set via path variable.
+      tags:
+        - power
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - reboot
+              - shutdown
+          example: reboot
+          description: Action to perform for the machine
+      responses:
+        '200':
+          description: Machine shutdown successful
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/replication/http/items:
+    get:
+      operationId: replicationGetHttpItemsList
+      summary: "Returns current configuration"
+      description: Returns the current configuration of the secret replication component.
+      tags:
+        - secrets
+      responses:
+        '200':
+          description: The current configuration of the secret syncer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplicationHttpItemsList"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/replication/http/items/{id}:
+    get:
+      operationId: replicationGetHttpItem
+      summary: "Returns the replication status of a single item"
+      description: >
+        Returns the replication status of a single secret replication item. The id of the item is passed via path
+        variable.
+      tags:
+        - secrets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "prod/db"
+          description: The id which translates to the secret path of the to-be-synced item in Vault.
+      responses:
+        '200':
+          description: Object containing the status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplicationHttpItem"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/replication/secrets/sync-requests:
+    post:
+      operationId: replicationPostSecretsRequests
+      summary: Replicate a secret from Vault
+      description: >
+        Replicates a predefined secret from Vault to the local filesystem. The secret config is defined by the secret path which is expected as query parameter.
+      tags:
+        - secrets
+      parameters:
+        - name: secret-path
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "prod/database"
+          description: The KV2 path of the secret that you want to trigger the sync for
+      responses:
+        '200':
+          description: Successfully synced secret
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/replication/secrets/items:
+    get:
+      operationId: replicationGetSecretsItemsList
+      summary: "Returns current configuration"
+      description: Returns the current configuration of the secret replication component.
+      tags:
+        - secrets
+      responses:
+        '200':
+          description: The current configuration of the secret syncer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplicationSecretsItemsList"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/replication/secrets/items/{id}:
+    get:
+      operationId: replicationGetSecretsItem
+      summary: "Returns the replication status of a single item"
+      description: >
+        Returns the replication status of a single secret replication item. The id of the item is passed via path
+        variable.
+      tags:
+        - secrets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "prod/db"
+          description: The id which translates to the secret path of the to-be-synced item in Vault.
+      responses:
+        '200':
+          description: Object containing the status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplicationSecretsItem"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/services/{unit}/status:
+    put:
+      operationId: servicesUnitStatusPut
+      summary: Interact with a system service
+      description: Interacts with a system service. Unit and action are set via path.
+      tags:
+        - services
+      parameters:
+        - name: unit
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The name of the system service unit to be restarted
+          example: sshd.service
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - restart
+              - stop
+              - start
+          example: start
+          description: Action to perform for the system service unit
+      responses:
+        '200':
+          description: Action carried out successfully to system service unit
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/services/{unit}/logs:
+    get:
+      operationId: servicesUnitLogsGet
+      summary: Get logs of a system service unit
+      description: Retrieve logs for a system unit. The unit must be provided in the path.
+      tags:
+        - services
+      parameters:
+        - name: unit
+          description: The name of the system service unit to request logs for
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "sshd.service"
+      responses:
+        '200':
+          description: Logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceLogsData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/wol-message/{alias}:
+    post:
+      operationId: wolPostMessage
+      summary: Send a WOL packet
+      description: Craft a WOL packet that wakes up a machine using Wake-on-LAN. The alias must be provided by path.
+      tags:
+        - wol
+      parameters:
+        - name: alias
+          in: path
+          required: true
+          schema:
+            type: string
+          example: notebook
+          description: The configured alias of the machine to send a WOL packet to
+      responses:
+        '200':
+          description: Machine wakeup signal sent successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+components:
+  schemas:
+    Problem:
+      description: A generic HTTP problem
+      xml:
+        name: problem
+        namespace: urn:ietf:rfc:7807
+      properties:
+        type:
+          type: "string"
+          description: "A URI reference that identifies the problem type"
+          example: "https://example.com/probs/out-of-credit"
+        title:
+          type: "string"
+          description: "A short, human-readable summary of the problem type"
+          example: "You do not have enough credit."
+        detail:
+          type: "string"
+          description: "A human-readable explanation specific to this occurrence of the problem"
+          example: "Your current balance is 30, but that costs 50."
+        instance:
+          type: "string"
+          description: "A URI reference that identifies the specific occurrence of the problem"
+          example: "/account/12345/msgs/abc"
+        status:
+          type: "integer"
+          description: "The HTTP status code"
+          example: 400
+      example:
+        type: "https://example.com/probs/out-of-credit"
+        title: "You do not have enough credit."
+        detail: "You do not have enough credit."
+        instance: "/account/12345/msgs/abc"
+        status: 400
+
+    AcmeManagedCertificateList:
+      type: object
+      title: AcmeManagedCertificateList
+      description: "The configuration of all configured managed ACME certificates"
+      properties:
+        data:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: '#/components/schemas/AcmeManagedCertificate'
+          description: The sync items
+
+    AcmeManagedCertificate:
+      type: object
+      title: AcmeManagedCertificateList
+      description: "The configuration of the managed ACME certificate"
+      properties:
+        certificate:
+          $ref: '#/components/schemas/X509CertificateData'
+        certificate_config:
+          $ref: '#/components/schemas/X509CertificateConfig'
+        storage_config:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: '#/components/schemas/X509CertificateStorage'
+        post_hooks:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: '#/components/schemas/PostHooks'
+
+    ReplicationHttpItem:
+      type: object
+      title: HttpReplicationItem
+      description: "Configuration and status of a single HTTP replication item"
+      properties:
+        id:
+          type: string
+          example: "ca-crt"
+          x-go-type-skip-optional-pointer: true
+          description: id of the item
+        source:
+          type: string
+          example: "prod/db"
+          x-go-type-skip-optional-pointer: true
+          description: path of the secret to read and sync to the local filesystem
+        dest_uri:
+          type: string
+          example: "/tmp/db.json"
+          x-go-type-skip-optional-pointer: true
+          description: destination path where the read secret should be writen to
+        expected_checksum:
+          type: string
+          example: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+          description: only save the file if the checksum matches
+        status:
+          type: string
+          example: "synced"
+          x-go-type-skip-optional-pointer: true
+          description: the status of the synced secret
+          enum:
+            - unknown
+            - synced
+            - failed
+            - invalid_checksum
+        post_hooks:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: '#/components/schemas/PostHooks'
+
+    ReplicationHttpItemsList:
+      type: object
+      title: SecretReplicationItems
+      description: "All managed HTTP replication items"
+      properties:
+        data:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: '#/components/schemas/ReplicationHttpItem'
+          description: The sync items
+      example:
+        data:
+          - secret_path: "prod/db"
+            formatter: "json"
+            dest_uri: "/tmp/db.json"
+
+    ReplicationSecretsItemsList:
+      type: object
+      title: SecretReplicationItems
+      description: "The configuration of all configured managed secrets replication items"
+      properties:
+        data:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: '#/components/schemas/ReplicationSecretsItem'
+          description: The sync items
+      example:
+        data:
+          - secret_path: "prod/db"
+            formatter: "json"
+            dest_uri: "/tmp/db.json"
+
+    ReplicationSecretsItem:
+      type: object
+      title: SecretReplicationItem
+      description: "Configuration and status of a single secret replication item"
+      properties:
+        id:
+          type: string
+          example: "database"
+          x-go-type-skip-optional-pointer: true
+          description: id of the item
+        secret_path:
+          type: string
+          example: "prod/db"
+          x-go-type-skip-optional-pointer: true
+          description: path of the secret to read and sync to the local filesystem
+        formatter:
+          type: string
+          example: "json"
+          x-go-type-skip-optional-pointer: true
+          description: name of the formatter
+        dest_uri:
+          type: string
+          example: "/tmp/db.json"
+          x-go-type-skip-optional-pointer: true
+          description: destination path where the read secret should be writen to
+        status:
+          type: string
+          example: "synced"
+          description: the status of the synced secret
+          enum:
+            - unknown
+            - synced
+            - failed
+      example:
+        secret_path: "prod/db"
+        formatter: "json"
+        dest_uri: "/tmp/db.json"
+        status: "failed"
+
+    PackageUpdates:
+      title: PackageUpdates
+      type: object
+      description: "Returns whether system updates are available and which packages can be updated"
+      properties:
+        updates_available:
+          type: boolean
+          x-go-type-skip-optional-pointer: true
+          description: Indicates if there are updates available
+          example: true
+        updatable_packages:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: '#/components/schemas/PackageInfo'
+          description: List of packages that can be updated
+      example:
+        updates_available: true
+        updatable_packages:
+          - name: "nginx"
+            version: "1.18.0"
+            repo: "main"
+
+    PackageInfo:
+      type: object
+      title: DnfPackageInfo
+      description: "Info about a single package"
+      properties:
+        name:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          example: "nginx"
+          description: Name of the package
+        version:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          example: "1.18.0"
+          description: Version of the package
+        repo:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          example: "main"
+          description: Repository from which the package was installed
+      example:
+        name: "nginx"
+        version: "1.18.0"
+        repo: "main"
+
+    PackagesInstalled:
+      title: PackagesInstalled
+      type: object
+      description: "List of all the installed packages"
+      properties:
+        packages:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: '#/components/schemas/PackageInfo'
+          description: List of installed packages
+      example:
+        packages:
+          - name: "nginx"
+            version: "1.18.0"
+            repo: "main"
+
+    ServiceLogsData:
+      type: object
+      description: Logs data for a service
+      properties:
+        data:
+          $ref: '#/components/schemas/ServiceLogs'
+        error:
+          type: string
+          nullable: true
+          example: null
+      example:
+        data:
+          logs:
+            - "Feb 03 21:48:52 localhost.localdomain kernel: SELinux: 2048 avtab hash slots, 104131 rules."
+            - "Feb 03 21:48:52 localhost.localdomain kernel: SELinux: 2048 avtab hash slots, 104131 rules."
+
+    ServiceLogs:
+      type: object
+      title: Logs
+      description: Represents log data. Each entry in the array represents a single line of data.
+      properties:
+        logs:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          maxItems: 1000
+          items:
+            type: string
+      example:
+        logs:
+          - "Feb 03 21:48:52 localhost.localdomain kernel: SELinux: 2048 avtab hash slots, 104131 rules."
+          - "Feb 03 21:48:52 localhost.localdomain kernel: SELinux: 2048 avtab hash slots, 104131 rules."
+
+    X509CertificateConfig:
+      title: PkiCertificateConfig
+      type: object
+      description: Returns the configuration of a managed x509 certificate
+      properties:
+        id:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: Unique identifier for the certificate configuration
+        role:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: The role associated with the certificate
+        common_name:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: The common name (CN) for the certificate
+        ttl:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: The time-to-live (TTL) duration for the certificate
+        alt_names:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            type: string
+          description: A list of alternative names (SANs) for the certificate
+        ip_sans:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            type: string
+          description: A list of IP SANs for the certificate
+
+    X509CertificateData:
+      title: X509Certificate
+      type: object
+      properties:
+        issuer:
+          $ref: '#/components/schemas/PkiIssuer'
+        subject:
+          type: string
+          description: The subject of the certificate.
+        serial:
+          type: string
+          description: The serial number of the x509 certificate.
+        email_addresses:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            type: string
+          description: A list of email addresses associated with the certificate.
+        not_before:
+          type: string
+          format: date-time
+          description: The start date of the certificate's validity period.
+        not_after:
+          type: string
+          format: date-time
+          description: The end date of the certificate's validity period.
+        percentage:
+          type: number
+          x-go-type-skip-optional-pointer: true
+          format: float
+          description: Lifetime of the certificate.
+      required:
+        - issuer
+        - subject
+        - serial
+        - not_before
+        - not_after
+      description: Returns the x509 certificate data
+
+    X509ManagedCertificate:
+      type: object
+      title: PkiManagedCertificateConfig
+      description: Represents the configuration of a managed x509 certificate
+      properties:
+        certificate_data:
+          $ref: '#/components/schemas/X509CertificateData'
+        certificate_config:
+          $ref: '#/components/schemas/X509CertificateConfig'
+        storage_config:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: '#/components/schemas/X509CertificateStorage'
+        post_hooks:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: '#/components/schemas/PostHooks'
+
+    X509CertificateStorage:
+      type: object
+      title: PkiCertificateStorage
+      description: The storage configuration of a managed x509 certificate
+      properties:
+        cert_file:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: The file that the cert will be written to
+        key_file:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: The file that the key will be written to
+        ca_file:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: The file that the ca will be written to
+
+    X509ManagedCertificateList:
+      type: object
+      title: PkiManagedCertificateList
+      properties:
+        data:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: '#/components/schemas/X509ManagedCertificate'
+      description: Returns a list of all the configured managed PKI certificate
+
+    PkiIssuer:
+      type: object
+      title: Issuer
+      properties:
+        serial_number:
+          type: string
+          description: The serial number of the issuer.
+        common_name:
+          type: string
+          description: The common name of the issuer.
+      required:
+        - serial_number
+        - common_name
+      description: Information about the certificate's issuer.
+
+    PostHooks:
+      type: object
+      title: PostHooks
+      description: Hooks that are run after a cert has been issued
+      properties:
+        name:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: The name of the hook
+        cmd:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: The command and its args that are run
+
+    SshManagedCertificate:
+      type: object
+      title: SshManagedCertificate
+      description: Represents the configuration and storage information of a managed SSH certificate
+      properties:
+        certificate_config:
+          $ref: '#/components/schemas/SshCertificateConfig'
+        storage_config:
+          $ref: '#/components/schemas/SshCertificateStorage'
+        certificate:
+          $ref: '#/components/schemas/SshCertificateData'
+
+    SshManagedCertificatesList:
+      type: object
+      title: SshManagedCertificatesList
+      properties:
+        data:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            $ref: '#/components/schemas/SshManagedCertificate'
+      description: Returns a list of all the configured managed SSH certificate
+
+    SshCertificateStorage:
+      type: object
+      title: SshCertificateStorage
+      description: The storage configuration of a managed SSH certificate
+      properties:
+        public_key_file:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: The file that contains the public key to be signed
+        certificate_file:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: The file that the certificate will be written to
+
+    SshCertificateData:
+      type: object
+      title: SshCertificate
+      description: The actual data of a SSH certificate
+      properties:
+        type:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: The type of the certificate.
+        serial:
+          type: integer
+          format: int64
+          x-go-type-skip-optional-pointer: true
+          description: The serial number of the SSH certificate.
+        valid_after:
+          type: string
+          format: date-time
+          x-go-type-skip-optional-pointer: true
+          description: The time after which the certificate is valid.
+        valid_before:
+          type: string
+          format: date-time
+          x-go-type-skip-optional-pointer: true
+          description: The time before which the certificate is valid.
+        principals:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            type: string
+          description: List of principals associated with the certificate.
+        extensions:
+          type: object
+          x-go-type-skip-optional-pointer: true
+          additionalProperties:
+            type: string
+          description: A map of extensions associated with the certificate.
+        critical_options:
+          type: object
+          x-go-type-skip-optional-pointer: true
+          additionalProperties:
+            type: string
+          description: A map of critical options associated with the certificate.
+        percentage:
+          type: number
+          x-go-type-skip-optional-pointer: true
+          format: float
+          description: Percentage associated with the certificate.
+
+    SshCertificateConfig:
+      type: object
+      title: SshCertificateConfig
+      description: Represents the configuration of a managed SSH certificate
+      properties:
+        id:
+          type: "string"
+          x-go-type-skip-optional-pointer: true
+          description: "The id of this managed certificate"
+          example: "user-cert"
+        role:
+          type: "string"
+          x-go-type-skip-optional-pointer: true
+          description: "Name of the vault role"
+          example: "my-role"
+        principals:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            type: "string"
+            description: "Valid principals for the signed cert"
+            example: "admin"
+          example: ["admin", "nimda"]
+        public_key_file:
+          type: "string"
+          x-go-type-skip-optional-pointer: true
+          description: "The file to read the SSH public key from"
+          example: "/home/user/.ssh/id_rsa.pub"
+        certificate_file:
+          type: "string"
+          x-go-type-skip-optional-pointer: true
+          description: "The file to write the signed cert to"
+          example: "/home/user/.ssh/id_rsa.crt"
+        ttl:
+          type: "string"
+          x-go-type-skip-optional-pointer: true
+          description: "The desired TTL of the signature"
+          example: "48h"
+        cert_type:
+          x-go-type-skip-optional-pointer: true
+          type: string
+      example:
+        id: "user-cert"
+        role: "my-role"
+        principals: ["admin", "nimda"]
+        publicKeyFile: "/home/user/.ssh/id_rsa.pub"
+        certificateFile: "/home/user/.ssh/id_rsa.crt"
+        ttl: "48h"
+        certType: "rsa"
+
+    InfoComponents:
+      type: object
+      title: SysComponents
+      description: "Describes which components are enabled on the server"
+      properties:
+        enabled_components:
+          type: array
+          x-go-type-skip-optional-pointer: true
+          items:
+            type: "string"
+            description: "The name of the component"
+            example: "HttpReplication"
+          example: ["HttpReplication", "SecretsReplication"]
+
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/bad-request
+            title: Bad Request
+            status: 400
+            detail: The request is invalid or missing required parameters.
+        application/problem+xml:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/bad-request
+            title: Bad Request
+            status: 400
+            detail: The request is invalid or missing required parameters.
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/forbidden
+            title: Forbidden
+            status: 403
+            detail: Access is forbidden for the provided credentials.
+        application/problem+xml:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/forbidden
+            title: Forbidden
+            status: 403
+            detail: Access is forbidden for the provided credentials.
+
+    InternalServerError:
+      description: Internal Server Error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/internal-server-error
+            title: Internal Server Error
+            status: 500
+            detail: An unexpected error occurred.
+        application/problem+xml:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/internal-server-error
+            title: Internal Server Error
+            status: 500
+            detail: An unexpected error occurred.
+
+    NotFound:
+      description: Not Found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/not-found
+            title: Not Found
+            status: 404
+            detail: The requested resource was not found.
+        application/problem+xml:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/not-found
+            title: Not Found
+            status: 404
+            detail: The requested resource was not found.
+
+    NotImplemented:
+      description: Not Implemented
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/not-implemented
+            title: Not Implemented
+            status: 501
+            detail: This function is not enabled.
+        application/problem+xml:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/not-implemented
+            title: Not Implemented
+            status: 501
+            detail: This function is not enabled.
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/unauthorized
+            title: Unauthorized
+            status: 401
+            detail: You do not have the necessary permissions.
+        application/problem+xml:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/unauthorized
+            title: Unauthorized
+            status: 401
+            detail: You do not have the necessary permissions.
