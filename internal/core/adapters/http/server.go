@@ -146,7 +146,9 @@ func (s *HttpServer) StartServer(ctx context.Context, wg *sync.WaitGroup) error 
 		log.Info().Str("component", apiServerComponent).Bool("tls", s.IsTLSConfigured()).Str("address", s.address).Msg("Starting server")
 		if s.IsTLSConfigured() {
 			if server.TLSConfig == nil {
-				server.TLSConfig = &tls.Config{}
+				server.TLSConfig = &tls.Config{
+					MinVersion: tls.VersionTLS13,
+				}
 			}
 
 			getCert := func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
