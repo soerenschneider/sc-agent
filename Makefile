@@ -53,3 +53,6 @@ docs:
 	rm -rf go-diagrams
 	go run doc/main.go
 	cd go-diagrams && dot -Tpng diagram.dot > ../overview.png
+
+tofu:
+	tofu -chdir=contrib/terraform destroy -auto-approve; tofu -chdir=contrib/terraform apply -auto-approve
