@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0 (2024-08-23)
+
+
+### Features
+
+* dynamically load tls certificates ([700c624](https://github.com/soerenschneider/sc-agent/commit/700c6247afc37693e573067c9e284546f33959e9))
+
+
+### Bug Fixes
+
+* **deps:** bump github.com/prometheus/client_golang ([78815be](https://github.com/soerenschneider/sc-agent/commit/78815bec119f34128f9379cda89eef6201f95d1b))
+
 ## [1.1.0](https://github.com/soerenschneider/sc-agent/compare/v1.0.0...v1.1.0) (2024-08-05)
 
 
