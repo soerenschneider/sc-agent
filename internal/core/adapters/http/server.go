@@ -14,6 +14,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/soerenschneider/sc-agent/internal/core/ports"
+	"github.com/soerenschneider/sc-agent/internal/metrics"
 	"gitlab.com/tanna.dev/openapi-doc-http-handler/elements"
 	"go.uber.org/multierr"
 )
@@ -144,7 +145,21 @@ func (s *HttpServer) StartServer(ctx context.Context, wg *sync.WaitGroup) error 
 	go func() {
 		log.Info().Str("component", apiServerComponent).Bool("tls", s.IsTLSConfigured()).Str("address", s.address).Msg("Starting server")
 		if s.IsTLSConfigured() {
-			if err := server.ListenAndServeTLS(s.certFile, s.keyFile); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if server.TLSConfig == nil {
+				server.TLSConfig = &tls.Config{}
+			}
+
+			getCert := func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				cert, err := tls.LoadX509KeyPair(s.certFile, s.keyFile)
+				if err != nil {
+					metrics.AdapterHttpTlsErrors.Inc()
+					return nil, err
+				}
+				return &cert, nil
+			}
+
+			server.TLSConfig.GetCertificate = getCert
+			if err := server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				errChan <- fmt.Errorf("can not start api server: %w", err)
 			}
 		} else {

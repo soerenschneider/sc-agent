@@ -40,9 +40,9 @@ type Config struct {
 
 type Http struct {
 	Enabled        bool     `yaml:"enabled"`
-	TlsCertFile    string   `yaml:"tls_cert_file" validate:"omitempty,file"`
-	TlsKeyFile     string   `yaml:"tls_key_file" validate:"omitempty,file"`
-	TlsCaFile      string   `yaml:"tls_ca_file" validate:"omitempty,file"`
+	TlsCertFile    string   `yaml:"tls_cert_file" validate:"omitempty,filepath"`
+	TlsKeyFile     string   `yaml:"tls_key_file" validate:"omitempty,filepath"`
+	TlsCaFile      string   `yaml:"tls_ca_file" validate:"omitempty,filepath"`
 	TlsClientAuth  bool     `yaml:"tls_client_auth"`
 	AllowedUserCns []string `yaml:"allowed_user_cns"`
 	AllowedEmails  []string `yaml:"allowed_emails"`
