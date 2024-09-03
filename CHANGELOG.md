@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.1](https://github.com/soerenschneider/sc-agent/compare/v1.0.0...v1.0.1) (2024-09-02)
+
+
+### Bug Fixes
+
+* **deps:** bump github.com/prometheus/client_golang ([ea70ab9](https://github.com/soerenschneider/sc-agent/commit/ea70ab95be093ebd646ba952a09342539f224fa1))
+* **deps:** bump github.com/prometheus/common from 0.55.0 to 0.57.0 ([9db5770](https://github.com/soerenschneider/sc-agent/commit/9db5770c869915c96e0045a8039f1637bfc744ca))
+* set tls min version to tls1.3 ([7b57d3e](https://github.com/soerenschneider/sc-agent/commit/7b57d3eeb79a6ecc9bcd7baf39faf74647b8cba2))
+
 ## 1.0.0 (2024-08-23)
 
 
