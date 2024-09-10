@@ -229,6 +229,9 @@ func (s *Service) shouldIssueNewCertificate(ctx context.Context, sink X509CertSt
 		}
 	}
 
+	metrics.PkiCertPercent.WithLabelValues(cert.Subject.CommonName).Set(float64(pkg.GetPercentage(cert.NotBefore, cert.NotAfter)))
+	metrics.PkiExpirationDate.WithLabelValues(cert.Subject.CommonName).Set(float64(cert.NotAfter.Unix()))
+
 	if !pki.IsCertExpired(*cert) {
 		if err := s.Verify(ctx, cert); err != nil {
 			return true, fmt.Errorf("cert exists but can not be verified against ca: %w", err)
