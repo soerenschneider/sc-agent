@@ -1,6 +1,7 @@
 package http_replication
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -189,7 +190,7 @@ func isMismatchedChecksum(conf http_replication.ReplicationItem, hash string) bo
 
 func hashContent(data []byte) string {
 	hasher := sha256.New()
-	hasher.Write(data)
+	hasher.Write(bytes.TrimSpace(data))
 	hashBytes := hasher.Sum(nil)
 	hashString := hex.EncodeToString(hashBytes)
 	return hashString
