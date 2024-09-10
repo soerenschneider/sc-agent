@@ -161,13 +161,14 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 		return nil
 	}
 
+	s.cache[conf.ReplicationConf.Id] = hash
+	updateMetricsHash(conf.ReplicationConf.Id, data)
+
 	if !found {
 		read, err := conf.Destination.Read()
-		if err == nil {
-			if hash == hashContent(read) {
-				log.Info().Str(logComponent, httpReplicationComponent).Str("id", conf.ReplicationConf.Id).Msg("file already exists")
-				return nil
-			}
+		if err == nil && hash == hashContent(read) {
+			log.Info().Str(logComponent, httpReplicationComponent).Str("id", conf.ReplicationConf.Id).Msg("file already exists locally")
+			return nil
 		}
 	}
 
@@ -175,12 +176,11 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 	if err := conf.Destination.Write(data); err != nil {
 		return err
 	}
-	updateMetricsHash(conf.ReplicationConf.Id, data)
+
 	if err := pkg.RunPostIssueHooks(conf.PostHooks); err != nil {
 		return err
 	}
 
-	s.cache[conf.ReplicationConf.Id] = hash
 	return nil
 }
 
