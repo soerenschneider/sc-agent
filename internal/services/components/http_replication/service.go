@@ -137,6 +137,7 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 
 	resp, err := s.client.Do(req)
 	if err != nil {
+		metrics.HttpReplicationErrors.WithLabelValues(conf.ReplicationConf.Id, "request_errors").Inc()
 		return err
 	}
 
@@ -153,6 +154,7 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 	if isMismatchedChecksum(conf, hash) {
 		conf.Status = http_replication.InvalidChecksum
 		log.Error().Str(logComponent, httpReplicationComponent).Str("hash_expected", conf.ReplicationConf.Sha256Sum).Str("hash_actual", hash).Str("id", conf.ReplicationConf.Id).Msg("invalid hash")
+		metrics.HttpReplicationErrors.WithLabelValues(conf.ReplicationConf.Id, "hash_mismatch").Inc()
 		return http_replication.ErrMismatchedHash
 	}
 
@@ -174,10 +176,12 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 
 	log.Info().Str(logComponent, httpReplicationComponent).Str("id", conf.ReplicationConf.Id).Msg("writing updated value to disk")
 	if err := conf.Destination.Write(data); err != nil {
+		metrics.HttpReplicationErrors.WithLabelValues(conf.ReplicationConf.Id, "write_file").Inc()
 		return err
 	}
 
 	if err := pkg.RunPostIssueHooks(conf.PostHooks); err != nil {
+		metrics.HttpReplicationErrors.WithLabelValues(conf.ReplicationConf.Id, "post_hooks").Inc()
 		return err
 	}
 
