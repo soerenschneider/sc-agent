@@ -21,7 +21,7 @@ func buildApiServer(conf config.Config, services *ports.Components) (*http_serve
 	var opts []http_server.WebServerOpts
 	if conf.Http.TlsClientAuth {
 		opts = append(opts, http_server.WithTLSClientVerification(conf.Http.TlsCertFile, conf.Http.TlsKeyFile, conf.Http.TlsCaFile))
-	} else if len(conf.Http.TlsCaFile) > 0 && len(conf.Http.TlsKeyFile) > 0 {
+	} else if len(conf.Http.TlsCertFile) > 0 && len(conf.Http.TlsKeyFile) > 0 {
 		opts = append(opts, http_server.WithTLS(conf.Http.TlsCertFile, conf.Http.TlsKeyFile))
 	}
 
@@ -44,7 +44,7 @@ func buildMetricsServer(conf config.Config) (*metrics.MetricsServer, error) {
 	var opts []metrics.MetricsServerOpts
 	if conf.Metrics.TlsClientAuth {
 		opts = append(opts, metrics.WithTLSClientVerification(conf.Metrics.TlsCertFile, conf.Metrics.TlsKeyFile, conf.Metrics.TlsCaFile))
-	} else if len(conf.Metrics.TlsCaFile) > 0 && len(conf.Metrics.TlsKeyFile) > 0 {
+	} else if len(conf.Metrics.TlsCertFile) > 0 && len(conf.Metrics.TlsKeyFile) > 0 {
 		opts = append(opts, metrics.WithTLS(conf.Metrics.TlsCertFile, conf.Metrics.TlsKeyFile))
 	}
 
