@@ -198,6 +198,6 @@ func hashContent(data []byte) string {
 
 func updateMetricsHash(id string, data []byte) {
 	h := fnv.New64a()
-	h.Write(data)
+	_, _ = h.Write(data)
 	metrics.HttpReplicationFileHash.WithLabelValues(id).Set(float64(h.Sum64()))
 }
