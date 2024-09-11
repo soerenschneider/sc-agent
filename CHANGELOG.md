@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.1.0](https://github.com/soerenschneider/sc-agent/compare/v1.0.1...v1.1.0) (2024-09-11)
+
+
+### Features
+
+* add metrics for http replication errors ([f9375c3](https://github.com/soerenschneider/sc-agent/commit/f9375c3c614688e5f64917ce3ed1d965510fac03))
+
+
+### Bug Fixes
+
+* also write metric when reading existing certificate ([02f8128](https://github.com/soerenschneider/sc-agent/commit/02f8128e2ff74c578f5cba5428518e4e71c5a725))
+* **deps:** bump github.com/prometheus/client_golang ([d5b11ed](https://github.com/soerenschneider/sc-agent/commit/d5b11ed952311cb54a388fb177aad9c2d8b9df0d))
+* **deps:** bump github.com/prometheus/common from 0.57.0 to 0.59.1 ([9e8395e](https://github.com/soerenschneider/sc-agent/commit/9e8395ef65f7ccacd766f568a5634a6569220a3e))
+* **deps:** bump golang from 1.23.0 to 1.23.1 ([69b627e](https://github.com/soerenschneider/sc-agent/commit/69b627e91f37db4fae3f3d572f28d0d162779f13))
+* **deps:** bump golang.org/x/crypto from 0.26.0 to 0.27.0 ([1b0be87](https://github.com/soerenschneider/sc-agent/commit/1b0be8762733f59488cdd297e99d34d2719884a6))
+* **deps:** bump golang.org/x/term from 0.23.0 to 0.24.0 ([8aec0e6](https://github.com/soerenschneider/sc-agent/commit/8aec0e665632b9ad4ed4027f705332637e8bf787))
+* fix checks ([ae488ea](https://github.com/soerenschneider/sc-agent/commit/ae488ea90b05d2fca2006b9bd582964729717362))
+* require cert, key and ca if tls_client_auth=true ([f3fbb59](https://github.com/soerenschneider/sc-agent/commit/f3fbb591d3fa3ea455bf0f52cb0a613bced5a61b))
+* trim strings before hashing ([14327d0](https://github.com/soerenschneider/sc-agent/commit/14327d0a94b24688ec033f15cce468361dd214fd))
+* write metrics in case of file is already existent ([1ce18e1](https://github.com/soerenschneider/sc-agent/commit/1ce18e16622c0ddff6b09f1560ad34ee02f38f30))
+
 ## [1.0.1](https://github.com/soerenschneider/sc-agent/compare/v1.0.0...v1.0.1) (2024-09-02)
 
 
