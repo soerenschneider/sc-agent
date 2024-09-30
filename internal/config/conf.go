@@ -100,13 +100,13 @@ type Wol struct {
 
 type HttpReplication struct {
 	Enabled          bool                           `yaml:"enabled"`
-	ReplicationItems map[string]HttpReplicationItem `yaml:"items" validate:"required_if=Enabled true"`
+	ReplicationItems map[string]HttpReplicationItem `yaml:"items" validate:"dive,required_if=Enabled true"`
 }
 
 type HttpReplicationItem struct {
 	Source       string            `yaml:"source" validate:"http_url"`
 	Sha256Sum    string            `yaml:"sha256" validate:"omitempty,sha256"`
-	Destinations []string          `yaml:"dest"`
+	Destinations []string          `yaml:"dest" validate:"required"`
 	PostHooks    map[string]string `yaml:"post_hooks"`
 }
 
