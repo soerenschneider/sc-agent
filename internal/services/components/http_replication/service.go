@@ -63,6 +63,33 @@ func New(client Client, items []http_replication.ReplicationItem) (*Service, err
 	return ret, nil
 }
 
+func (s *Service) GetReplicationItem(id string) (http_replication.ReplicationItem, error) {
+	item, found := s.managedItems[id]
+	if !found {
+		return http_replication.ReplicationItem{}, http_replication.ErrHttpReplicationItemNotFound
+	}
+
+	item.Status = http_replication.Unknown
+	_, found = s.cache[id]
+	if found {
+		item.Status = http_replication.Synced
+	}
+
+	return item, nil
+}
+
+func (s *Service) GetReplicationItems() ([]http_replication.ReplicationItem, error) {
+	ret := make([]http_replication.ReplicationItem, len(s.managedItems))
+
+	idx := 0
+	for key := range s.managedItems {
+		ret[idx], _ = s.GetReplicationItem(key)
+		idx++
+	}
+
+	return ret, nil
+}
+
 func (s *Service) StartReplication(ctx context.Context) {
 	s.once.Do(func() {
 		if len(s.managedItems) == 0 {
@@ -100,33 +127,6 @@ func (s *Service) autoRenew(ctx context.Context) {
 			}
 		}
 	}
-}
-
-func (s *Service) GetReplicationItem(id string) (http_replication.ReplicationItem, error) {
-	item, found := s.managedItems[id]
-	if !found {
-		return http_replication.ReplicationItem{}, http_replication.ErrHttpReplicationItemNotFound
-	}
-
-	item.Status = http_replication.Unknown
-	_, found = s.cache[id]
-	if found {
-		item.Status = http_replication.Synced
-	}
-
-	return item, nil
-}
-
-func (s *Service) GetReplicationItems() ([]http_replication.ReplicationItem, error) {
-	ret := make([]http_replication.ReplicationItem, len(s.managedItems))
-
-	idx := 0
-	for key := range s.managedItems {
-		ret[idx], _ = s.GetReplicationItem(key)
-		idx++
-	}
-
-	return ret, nil
 }
 
 func (s *Service) Replicate(ctx context.Context, conf http_replication.ReplicationItem) error {
@@ -169,12 +169,12 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 	if !found {
 		read, err := conf.Destination.Read()
 		if err == nil && hash == hashContent(read) {
-			log.Info().Str(logComponent, httpReplicationComponent).Str("id", conf.ReplicationConf.Id).Msg("file already exists locally")
+			log.Debug().Str(logComponent, httpReplicationComponent).Str("id", conf.ReplicationConf.Id).Msg("file already exists locally")
 			return nil
 		}
 	}
 
-	log.Info().Str(logComponent, httpReplicationComponent).Str("id", conf.ReplicationConf.Id).Msg("writing updated value to disk")
+	log.Info().Str(logComponent, httpReplicationComponent).Str("id", conf.ReplicationConf.Id).Msg("writing item to disk")
 	if err := conf.Destination.Write(data); err != nil {
 		metrics.HttpReplicationErrors.WithLabelValues(conf.ReplicationConf.Id, "write_file").Inc()
 		return err
