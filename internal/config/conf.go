@@ -104,10 +104,10 @@ type HttpReplication struct {
 }
 
 type HttpReplicationItem struct {
-	Source    string            `yaml:"source" validate:"http_url"`
-	Sha256Sum string            `yaml:"sha256" validate:"omitempty,sha256"`
-	Storage   string            `yaml:"storage"`
-	PostHooks map[string]string `yaml:"post_hooks"`
+	Source       string            `yaml:"source" validate:"http_url"`
+	Sha256Sum    string            `yaml:"sha256" validate:"required,omitempty,sha256"`
+	Destinations []string          `yaml:"dest"`
+	PostHooks    map[string]string `yaml:"post_hooks"`
 }
 
 func (conf *HttpReplication) UnmarshalYAML(node *yaml.Node) error {

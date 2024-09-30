@@ -120,7 +120,7 @@ func BuildDeps(conf config.Config) (*ports.Components, error) {
 func buildHttpReplication(conf config.HttpReplication) (*http_replication2.Service, error) {
 	items := []http_replication.ReplicationItem{}
 	for key, val := range conf.ReplicationItems {
-		storage, err := buildCertStorage(val.Storage)
+		destStorage, err := buildCertStorage(val.Destinations)
 		if err != nil {
 			return nil, err
 		}
@@ -134,12 +134,12 @@ func buildHttpReplication(conf config.HttpReplication) (*http_replication2.Servi
 		items = append(items, http_replication.ReplicationItem{
 			PostHooks: postHooks,
 			ReplicationConf: http_replication.ReplicationConf{
-				Id:          key,
-				Source:      val.Source,
-				Destination: val.Storage,
-				Sha256Sum:   val.Sha256Sum,
+				Id:           key,
+				Source:       val.Source,
+				Destinations: val.Destinations,
+				Sha256Sum:    val.Sha256Sum,
 			},
-			Destination: storage,
+			Destination: destStorage,
 		})
 	}
 
@@ -218,6 +218,6 @@ func buildReleaseWatcher(conf config.Config) (*release_watcher.ReleaseWatcher, e
 	return release_watcher.New(httpClient, internal.BuildVersion)
 }
 
-func buildCertStorage(storageConf string) (*storage.FilesystemStorage, error) {
-	return storage.NewFilesystemStorageFromUri(storageConf)
+func buildCertStorage(storageConf []string) (http_replication2.StorageImplementation, error) {
+	return storage.NewMultiFilesystemStorage(storageConf...)
 }

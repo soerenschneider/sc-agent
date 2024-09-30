@@ -901,11 +901,14 @@ components:
           example: "prod/db"
           x-go-type-skip-optional-pointer: true
           description: path of the secret to read and sync to the local filesystem
-        dest_uri:
-          type: string
-          example: "/tmp/db.json"
+        dest_uris:
+          type: array
+          example: ["/etc/certs/pki-ca.crt", "/etc/haproxy/pki-ca.crt"]
           x-go-type-skip-optional-pointer: true
           description: destination path where the read secret should be writen to
+          maxItems: 100
+          items:
+            type: string
         expected_checksum:
           type: string
           example: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08

@@ -85,7 +85,7 @@ func convertHttpReplicationItem(item http_replication.ReplicationItem) Replicati
 	}
 	return ReplicationHttpItem{
 		Id:               item.ReplicationConf.Id,
-		DestUri:          item.ReplicationConf.Destination,
+		DestUris:         item.ReplicationConf.Destinations,
 		Source:           item.ReplicationConf.Source,
 		ExpectedChecksum: expectedChecksum,
 		PostHooks:        convertPosthooks(item.PostHooks),

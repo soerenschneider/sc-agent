@@ -21,10 +21,10 @@ var (
 )
 
 type ReplicationConf struct {
-	Id          string
-	Source      string
-	Destination string
-	Sha256Sum   string
+	Id           string
+	Source       string
+	Destinations []string
+	Sha256Sum    string
 }
 
 type ReplicationItem struct {
