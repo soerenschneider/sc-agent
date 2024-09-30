@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.0](https://github.com/soerenschneider/sc-agent/compare/v1.1.0...v1.2.0) (2024-09-30)
+
+
+### Features
+
+* allow writing replicated http items to multiple storage backends ([64fe211](https://github.com/soerenschneider/sc-agent/commit/64fe211f899cfbe048c84898efaaf97c8e34fb74))
+
+
+### Bug Fixes
+
+* **deps:** bump github.com/go-playground/validator/v10 ([982c293](https://github.com/soerenschneider/sc-agent/commit/982c293e7640c6fb9f1dce2065e5312e214194af))
+* **deps:** bump github.com/hashicorp/vault/api from 1.14.0 to 1.15.0 ([d2a52c0](https://github.com/soerenschneider/sc-agent/commit/d2a52c05ff6e69b8e4ef857e168543a605c594bb))
+* **deps:** bump github.com/oapi-codegen/oapi-codegen/v2 ([df2a521](https://github.com/soerenschneider/sc-agent/commit/df2a5217cfc80b2038132be75ea0334638605b3b))
+* **deps:** bump github.com/prometheus/client_golang ([2202269](https://github.com/soerenschneider/sc-agent/commit/22022699cce8684fd4095dcd2fc7cfa85053090f))
+* omitted 'dive' tag lead to items not being validated ([7f6a6d0](https://github.com/soerenschneider/sc-agent/commit/7f6a6d0569f1d6dbd6e11b8c74d3f86d3b524997))
+* remove 'required' tag from sha256sum ([e790257](https://github.com/soerenschneider/sc-agent/commit/e790257a7c523fee58cdc18ce4afc39b41ea4fa2))
+
 ## [1.1.0](https://github.com/soerenschneider/sc-agent/compare/v1.0.1...v1.1.0) (2024-09-11)
 
 
