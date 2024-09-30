@@ -100,11 +100,14 @@ func getDefaultTtl(req ssh.CertificateConfig) string {
 func (v *VaultSshClient) SignSshPublicKey(ctx context.Context, publicKeyData []byte, req ssh.CertificateConfig) (string, error) {
 	reqData := map[string]interface{}{
 		"public_key":       string(publicKeyData),
-		"valid_principals": strings.Join(req.Principals, ","),
 		"cert_type":        req.CertType,
 		"ttl":              getDefaultTtl(req),
 		"critical_options": req.CriticalOptions,
 		"extensions":       req.Extensions,
+	}
+
+	if len(req.Principals) > 0 {
+		reqData["valid_principals"] = strings.Join(req.Principals, ",")
 	}
 
 	resp, err := v.client.SignKeyWithContext(ctx, req.Role, reqData)
