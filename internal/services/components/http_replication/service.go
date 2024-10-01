@@ -130,6 +130,8 @@ func (s *Service) autoRenew(ctx context.Context) {
 }
 
 func (s *Service) Replicate(ctx context.Context, conf http_replication.ReplicationItem) error {
+	metrics.HttpReplicationTimestamp.WithLabelValues(conf.ReplicationConf.Id).SetToCurrentTime()
+	metrics.HttpReplicationRequests.WithLabelValues(conf.ReplicationConf.Id).Inc()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, conf.ReplicationConf.Source, nil)
 	if err != nil {
 		return err
