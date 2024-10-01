@@ -26,7 +26,7 @@ var (
 		Namespace: namespace,
 		Subsystem: subsystemHttpReplication,
 		Name:      "hash_value_total",
-		Help:      "Expiration date of the token",
+		Help:      "Hash value of the content",
 	}, []string{"id"})
 
 	HttpReplicationErrors = promauto.NewGaugeVec(prometheus.GaugeOpts{
