@@ -43,11 +43,9 @@ func (fs *MultiFilesystem) Read() ([]byte, error) {
 func (fs *MultiFilesystem) CanRead() error {
 	var errs error
 	for idx := range fs.storage {
-		err := fs.storage[idx].CanRead()
-		if err == nil {
-			return nil
+		if err := fs.storage[idx].CanRead(); err != nil {
+			errs = multierr.Append(errs, err)
 		}
-		errs = multierr.Append(errs, err)
 	}
 
 	return nil
@@ -56,25 +54,21 @@ func (fs *MultiFilesystem) CanRead() error {
 func (fs *MultiFilesystem) Write(data []byte) error {
 	var errs error
 	for idx := range fs.storage {
-		err := fs.storage[idx].Write(data)
-		if err == nil {
-			return nil
+		if err := fs.storage[idx].Write(data); err != nil {
+			errs = multierr.Append(errs, err)
 		}
-		errs = multierr.Append(errs, err)
 	}
 
-	return nil
+	return errs
 }
 
 func (fs *MultiFilesystem) CanWrite() error {
 	var errs error
 	for idx := range fs.storage {
-		err := fs.storage[idx].CanWrite()
-		if err == nil {
-			return nil
+		if err := fs.storage[idx].CanWrite(); err != nil {
+			errs = multierr.Append(errs, err)
 		}
-		errs = multierr.Append(errs, err)
 	}
 
-	return nil
+	return errs
 }
