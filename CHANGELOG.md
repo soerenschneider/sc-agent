@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/soerenschneider/sc-agent/compare/v1.2.0...v1.3.0) (2024-10-01)
+
+
+### Features
+
+* add further metrics for http replication ([5e8ef76](https://github.com/soerenschneider/sc-agent/commit/5e8ef76eab4a5a2e6906360141f2a2c242d89635))
+
+
+### Bug Fixes
+
+* fix metric help ([642eebb](https://github.com/soerenschneider/sc-agent/commit/642eebbd88e0e9b675d21619c071a84935d751e1))
+* fix metric type ([e99a19f](https://github.com/soerenschneider/sc-agent/commit/e99a19f4c2498b9137f7f85f6c5bfe1341890238))
+* write to all backends ([b5cb9b9](https://github.com/soerenschneider/sc-agent/commit/b5cb9b9151206e3c95fed5b3390e9450296802f5))
+
 ## [1.2.0](https://github.com/soerenschneider/sc-agent/compare/v1.1.0...v1.2.0) (2024-09-30)
 
 
