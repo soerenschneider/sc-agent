@@ -29,7 +29,7 @@ var (
 		Help:      "Hash value of the content",
 	}, []string{"id"})
 
-	HttpReplicationErrors = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	HttpReplicationErrors = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: subsystemHttpReplication,
 		Name:      "errors_total",
