@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/soerenschneider/sc-agent/compare/v1.3.0...v1.4.0) (2024-10-04)
+
+
+### Features
+
+* also build releases for arm7 ([e445b87](https://github.com/soerenschneider/sc-agent/commit/e445b87a27398a822bf5479ab05db5a097d5d43b))
+
 ## [1.3.0](https://github.com/soerenschneider/sc-agent/compare/v1.2.0...v1.3.0) (2024-10-01)
 
 
