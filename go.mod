@@ -6,7 +6,7 @@ require (
 	github.com/adrianbrad/queue v1.3.0
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/getkin/kin-openapi v0.127.0
+	github.com/getkin/kin-openapi v0.128.0
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/vault/api v1.15.0
