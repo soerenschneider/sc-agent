@@ -24,7 +24,7 @@ require (
 	go.uber.org/multierr v1.11.0
 	golang.org/x/crypto v0.27.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
-	golang.org/x/sys v0.25.0
+	golang.org/x/sys v0.26.0
 	golang.org/x/term v0.24.0
 	gopkg.in/yaml.v3 v3.0.1
 )
