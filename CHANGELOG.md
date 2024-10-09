@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/soerenschneider/sc-agent/compare/v1.4.0...v1.5.0) (2024-10-09)
+
+
+### Features
+
+* re-use storage backend to allow fine grained control over target file ([b3e2364](https://github.com/soerenschneider/sc-agent/commit/b3e23640d3498887deb5f23715308263a9cbe67b))
+
+
+### Bug Fixes
+
+* prevent newly added destinations not being written to ([f6d1117](https://github.com/soerenschneider/sc-agent/commit/f6d11174fe0783d153e298c46b0d5dadd7bbec99))
+
 ## [1.4.0](https://github.com/soerenschneider/sc-agent/compare/v1.3.0...v1.4.0) (2024-10-04)
 
 
