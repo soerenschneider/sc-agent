@@ -1,7 +1,17 @@
 package storage
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+
+	"github.com/rs/zerolog/log"
 	"go.uber.org/multierr"
+)
+
+var (
+	ErrFilesNotIdentical = errors.New("files not identical")
+	ErrFilesMissing      = errors.New("some files are missing")
 )
 
 type MultiFilesystem struct {
@@ -28,6 +38,65 @@ func NewMultiFilesystemStorage(storage ...string) (*MultiFilesystem, error) {
 }
 
 func (fs *MultiFilesystem) Read() ([]byte, error) {
+	if err := fs.sanitize(); err != nil {
+		if errors.Is(err, ErrFilesMissing) {
+			// All defined files have the same checksum but some files are missing. Try to write data to all backends.
+			read, err := fs.read()
+			if err != nil {
+				return nil, err
+			}
+
+			// try to write on best-effort
+			log.Debug().Str("component", "storage").Msg("trying to write files to all backends")
+			if err := fs.Write(read); err != nil {
+				log.Error().Err(err).Msg("failed to write data to all configured files")
+			}
+			return read, nil
+		}
+
+		// We found multiple files with different content, no source of truth available
+		return nil, err
+	}
+
+	return fs.read()
+}
+
+// sanitize checks whether all configured storage backends contain data and whether that data is identical, which
+// it should be.
+// This is needed in cases where a new storage backend is added to the configuration after data was already
+// written to existing backends. The new backend would not receive existing data due to the way the Read() method
+// is implemented.
+func (fs *MultiFilesystem) sanitize() error {
+	hashes := map[int]string{}
+	for idx := range fs.storage {
+		data, err := fs.storage[idx].Read()
+		if err == nil {
+			hashedBytes := sha256.Sum256(data)
+			hashes[idx] = hex.EncodeToString(hashedBytes[:])
+		}
+	}
+
+	hashesIdentical := true
+	for idx := 1; idx < len(hashes); idx++ {
+		if hashes[idx] != hashes[0] {
+			hashesIdentical = false
+		}
+	}
+
+	if !hashesIdentical {
+		log.Warn().Str("component", "storage").Msg("detected files which differ")
+		return ErrFilesNotIdentical
+	}
+
+	if len(hashes) > 0 && len(hashes) != len(fs.storage) {
+		log.Warn().Str("component", "storage").Msg("not all configured files are present")
+		return ErrFilesMissing
+	}
+
+	return nil
+}
+
+func (fs *MultiFilesystem) read() ([]byte, error) {
 	var errs error
 	for idx := range fs.storage {
 		read, err := fs.storage[idx].Read()
