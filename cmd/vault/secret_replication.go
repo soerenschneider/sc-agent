@@ -5,9 +5,10 @@ import (
 	"fmt"
 
 	"github.com/soerenschneider/sc-agent/internal/config/vault"
-	"github.com/soerenschneider/sc-agent/internal/domain"
+	domain "github.com/soerenschneider/sc-agent/internal/domain/secret_replication"
 	"github.com/soerenschneider/sc-agent/internal/services/components/secret_replication"
 	"github.com/soerenschneider/sc-agent/internal/services/components/secret_replication/formatter"
+	"github.com/soerenschneider/sc-agent/internal/storage"
 )
 
 const (
@@ -48,8 +49,8 @@ func BuildSecretReplication(conf *vault.SecretsReplication) (*secret_replication
 	return secret_replication.NewService(kv2Client, syncRequests)
 }
 
-func buildSyncSecretRequests(conf vault.SecretsReplication) ([]domain.SecretReplicationItem, error) {
-	var ret []domain.SecretReplicationItem
+func buildSyncSecretRequests(conf vault.SecretsReplication) ([]domain.ReplicationItem, error) {
+	var ret []domain.ReplicationItem
 
 	for id, req := range conf.ReplicationRequests {
 		formatter, err := buildSecretFormatter(req.Formatter, req.FormatterArgs)
@@ -57,11 +58,19 @@ func buildSyncSecretRequests(conf vault.SecretsReplication) ([]domain.SecretRepl
 			return nil, err
 		}
 
-		request := domain.SecretReplicationItem{
-			Id:         id,
-			SecretPath: req.SecretPath,
-			Formatter:  formatter,
-			DestUri:    req.DestUri,
+		storageImpl, err := storage.NewFilesystemStorageFromUri(req.DestUri)
+		if err != nil {
+			return nil, err
+		}
+
+		request := domain.ReplicationItem{
+			ReplicationConf: domain.ReplicationConf{
+				Id:         id,
+				SecretPath: req.SecretPath,
+				DestUri:    req.DestUri,
+			},
+			Formatter:   formatter,
+			Destination: storageImpl,
 		}
 
 		ret = append(ret, request)

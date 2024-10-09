@@ -3,7 +3,7 @@ package ports
 import (
 	"context"
 
-	"github.com/soerenschneider/sc-agent/internal/domain"
+	"github.com/soerenschneider/sc-agent/internal/domain/secret_replication"
 )
 
 type SecretsReplication interface {
@@ -17,8 +17,8 @@ type SecretsReplication interface {
 	// Returns:
 	//   bool: A boolean value indicating whether the secret was updated on the destination or not.
 	//   error: An error object if there was an issue during synchronization, otherwise nil.
-	Replicate(ctx context.Context, syncRequest domain.SecretReplicationItem) (bool, error)
-	GetReplicationItem(id string) (domain.SecretReplicationItem, error)
-	GetReplicationItems() []domain.SecretReplicationItem
+	Replicate(ctx context.Context, syncRequest secret_replication.ReplicationItem) (bool, error)
+	GetReplicationItem(id string) (secret_replication.ReplicationItem, error)
+	GetReplicationItems() []secret_replication.ReplicationItem
 	StartContinuousReplication(ctx context.Context)
 }

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/soerenschneider/sc-agent/internal/domain"
+	"github.com/soerenschneider/sc-agent/internal/domain/secret_replication"
 )
 
 func (s *HttpServer) ReplicationGetSecretsItem(w http.ResponseWriter, r *http.Request, id string) {
@@ -17,7 +17,7 @@ func (s *HttpServer) ReplicationGetSecretsItem(w http.ResponseWriter, r *http.Re
 
 	item, err := s.services.SecretsReplication.GetReplicationItem(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrSecretsReplicationItemNotFound) {
+		if errors.Is(err, secret_replication.ErrSecretsReplicationItemNotFound) {
 			writeRfc7807Error(w, http.StatusNotFound, "sync item not found", "")
 			return
 		}
@@ -46,7 +46,7 @@ func (s *HttpServer) ReplicationPostSecretsRequests(w http.ResponseWriter, r *ht
 
 	syncSecretRequest, err := s.services.SecretsReplication.GetReplicationItem(params.SecretPath)
 	if err != nil {
-		if errors.Is(err, domain.ErrSecretsReplicationItemNotFound) {
+		if errors.Is(err, secret_replication.ErrSecretsReplicationItemNotFound) {
 			writeRfc7807Error(w, http.StatusNotFound, "sync item not found", "")
 			return
 		}
@@ -88,29 +88,29 @@ func (s *HttpServer) ReplicationGetSecretsItemsList(w http.ResponseWriter, r *ht
 	_, _ = w.Write(marshalled)
 }
 
-func convertSecretReplicationStatus(status domain.SecretReplicationStatus) ReplicationSecretsItemStatus {
+func convertSecretReplicationStatus(status secret_replication.SecretReplicationStatus) ReplicationSecretsItemStatus {
 	switch status {
-	case domain.SynchronizedStatus:
+	case secret_replication.SynchronizedStatus:
 		return ReplicationSecretsItemStatusSynced
-	case domain.FailedStatus:
+	case secret_replication.FailedStatus:
 		return ReplicationSecretsItemStatusFailed
 	default:
 		return ReplicationSecretsItemStatusUnknown
 	}
 }
 
-func convertSecretReplicationItem(item domain.SecretReplicationItem) ReplicationSecretsItem {
+func convertSecretReplicationItem(item secret_replication.ReplicationItem) ReplicationSecretsItem {
 	status := convertSecretReplicationStatus(item.Status)
 	return ReplicationSecretsItem{
-		Id:         item.Id,
-		DestUri:    item.DestUri,
+		Id:         item.ReplicationConf.Id,
+		DestUri:    item.ReplicationConf.DestUri,
 		Formatter:  getType(item.Formatter),
-		SecretPath: item.SecretPath,
+		SecretPath: item.ReplicationConf.SecretPath,
 		Status:     &status,
 	}
 }
 
-func convertSecretReplicationItems(syncItems []domain.SecretReplicationItem) ReplicationSecretsItemsList {
+func convertSecretReplicationItems(syncItems []secret_replication.ReplicationItem) ReplicationSecretsItemsList {
 	ret := make([]ReplicationSecretsItem, len(syncItems))
 
 	for i, item := range syncItems {

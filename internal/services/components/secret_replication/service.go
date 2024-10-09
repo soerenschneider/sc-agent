@@ -12,9 +12,8 @@ import (
 
 	vault "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
-	"github.com/soerenschneider/sc-agent/internal/domain"
+	"github.com/soerenschneider/sc-agent/internal/domain/secret_replication"
 	"github.com/soerenschneider/sc-agent/internal/metrics"
-	"github.com/spf13/afero"
 	"go.uber.org/multierr"
 )
 
@@ -32,8 +31,7 @@ type SecretsReplicationOpts func(syncer *Service) error
 type Service struct {
 	client ReplicationClient
 
-	replicationItems    map[string]domain.SecretReplicationItem
-	fsImpl              afero.Fs
+	replicationItems    map[string]secret_replication.ReplicationItem
 	once                sync.Once
 	mutex               sync.Mutex
 	replicationInterval time.Duration
@@ -41,7 +39,7 @@ type Service struct {
 	hashes map[string]string
 }
 
-func NewService(client ReplicationClient, syncItems []domain.SecretReplicationItem, opts ...SecretsReplicationOpts) (*Service, error) {
+func NewService(client ReplicationClient, syncItems []secret_replication.ReplicationItem, opts ...SecretsReplicationOpts) (*Service, error) {
 	if client == nil {
 		return nil, errors.New("empty kv2client passed")
 	}
@@ -50,19 +48,16 @@ func NewService(client ReplicationClient, syncItems []domain.SecretReplicationIt
 		return nil, errors.New("no syncitems passed")
 	}
 
-	fs := afero.NewOsFs()
-
 	// convert to map
-	syncItemsMap := map[string]domain.SecretReplicationItem{}
+	syncItemsMap := map[string]secret_replication.ReplicationItem{}
 	for _, req := range syncItems {
-		syncItemsMap[req.SecretPath] = req
+		syncItemsMap[req.ReplicationConf.SecretPath] = req
 	}
 
 	ret := &Service{
 		client:              client,
 		replicationItems:    syncItemsMap,
 		hashes:              map[string]string{},
-		fsImpl:              fs,
 		replicationInterval: defaultTickerInterval,
 	}
 
@@ -123,22 +118,22 @@ func (s *Service) syncAllSecrets(ctx context.Context) {
 	}
 }
 
-func (s *Service) GetReplicationItem(id string) (domain.SecretReplicationItem, error) {
+func (s *Service) GetReplicationItem(id string) (secret_replication.ReplicationItem, error) {
 	item, found := s.replicationItems[id]
 	if !found {
-		return domain.SecretReplicationItem{}, domain.ErrSecretsReplicationItemNotFound
+		return secret_replication.ReplicationItem{}, secret_replication.ErrSecretsReplicationItemNotFound
 	}
 
-	item.Status = domain.FailedStatus
+	item.Status = secret_replication.FailedStatus
 	if found {
-		item.Status = domain.SynchronizedStatus
+		item.Status = secret_replication.SynchronizedStatus
 	}
 
 	return item, nil
 }
 
-func (s *Service) GetReplicationItems() []domain.SecretReplicationItem {
-	ret := make([]domain.SecretReplicationItem, len(s.replicationItems))
+func (s *Service) GetReplicationItems() []secret_replication.ReplicationItem {
+	ret := make([]secret_replication.ReplicationItem, len(s.replicationItems))
 
 	idx := 0
 	for key := range s.replicationItems {
@@ -149,48 +144,45 @@ func (s *Service) GetReplicationItems() []domain.SecretReplicationItem {
 	return ret
 }
 
-func (s *Service) Replicate(ctx context.Context, item domain.SecretReplicationItem) (bool, error) {
-	read, err := s.client.ReadSecret(ctx, item.SecretPath)
+func (s *Service) Replicate(ctx context.Context, item secret_replication.ReplicationItem) (bool, error) {
+	read, err := s.client.ReadSecret(ctx, item.ReplicationConf.SecretPath)
 	if err != nil {
 		errorLabel := "vault_unknown"
 		var respErr *vault.ResponseError
 		if errors.As(err, &respErr) {
 			errorLabel = fmt.Sprintf("vault_%d", respErr.StatusCode)
 		}
-		metrics.SecretReplicationErrors.WithLabelValues(item.SecretPath, errorLabel).Inc()
+		metrics.SecretReplicationErrors.WithLabelValues(item.ReplicationConf.SecretPath, errorLabel).Inc()
 		return false, err
 	}
 
 	formatted, err := item.Formatter.Format(read.Data)
 	if err != nil {
-		metrics.SecretReplicationErrors.WithLabelValues(item.SecretPath, "formatter").Inc()
+		metrics.SecretReplicationErrors.WithLabelValues(item.ReplicationConf.SecretPath, "formatter").Inc()
 		return false, err
 	}
 
 	newHash := hash(formatted)
-	oldHash, found := s.hashes[item.SecretPath]
+	oldHash, found := s.hashes[item.ReplicationConf.SecretPath]
 	if found {
 		if newHash == oldHash {
-			metrics.SecretsCacheHit.WithLabelValues(item.SecretPath).Inc()
-			log.Debug().Str("component", vaultSecretSyncer).Msgf("secret %s has not been updated since last time we read it", item.SecretPath)
+			metrics.SecretsCacheHit.WithLabelValues(item.ReplicationConf.SecretPath).Inc()
+			log.Debug().Str("component", vaultSecretSyncer).Msgf("secret %s has not been updated since last time we read it", item.ReplicationConf.SecretPath)
 			return false, nil
 		}
-		log.Info().Str("component", vaultSecretSyncer).Str("secret_path", item.SecretPath).Str("dest", item.DestUri).Msg("detected update in secret")
+		log.Info().Str("component", vaultSecretSyncer).Str("secret_path", item.ReplicationConf.SecretPath).Str("dest", item.ReplicationConf.DestUri).Msg("detected update in secret")
 	}
-	s.hashes[item.SecretPath] = newHash
+	s.hashes[item.ReplicationConf.SecretPath] = newHash
 
-	if err := s.saveFormattedSecret(formatted, item.DestUri); err != nil {
-		metrics.SecretReplicationErrors.WithLabelValues(item.SecretPath, "save").Inc()
+	//if err := s.saveFormattedSecret(formatted, item.ReplicationConf.DestUri); err != nil {
+	if err := item.Destination.Write(formatted); err != nil {
+		metrics.SecretReplicationErrors.WithLabelValues(item.ReplicationConf.SecretPath, "save").Inc()
 		return false, err
 	}
 
-	metrics.SecretsRead.WithLabelValues(item.SecretPath).Inc()
-	log.Info().Str("component", vaultSecretSyncer).Str("secret_path", item.SecretPath).Str("dest", item.DestUri).Msg("successfully synced secret")
+	metrics.SecretsRead.WithLabelValues(item.ReplicationConf.SecretPath).Inc()
+	log.Info().Str("component", vaultSecretSyncer).Str("secret_path", item.ReplicationConf.SecretPath).Str("dest", item.ReplicationConf.DestUri).Msg("successfully synced secret")
 	return true, nil
-}
-
-func (s *Service) saveFormattedSecret(data []byte, uri string) error {
-	return afero.WriteFile(s.fsImpl, uri, data, 0600)
 }
 
 func hash(data []byte) string {
