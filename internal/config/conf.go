@@ -148,7 +148,7 @@ func getDefaultConfig() Config {
 			Enabled: runtime.GOOS == "linux",
 		},
 		PowerStatus: &PowerStatus{
-			Enabled: runtime.GOOS == "linux",
+			Enabled: false,
 		},
 	}
 
