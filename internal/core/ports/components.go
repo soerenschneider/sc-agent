@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/soerenschneider/sc-agent/cmd/vault"
 	"github.com/soerenschneider/sc-agent/internal/config"
+	"github.com/soerenschneider/sc-agent/internal/services/components/packages"
 )
 
 const (
@@ -51,6 +52,13 @@ func (s *Components) StartServices(ctx context.Context, conf config.Config, scAg
 	if s.ReleaseWatcher != nil {
 		go func() {
 			s.ReleaseWatcher.WatchReleases(ctx)
+		}()
+	}
+
+	if s.Packages != nil {
+		go func() {
+			updatesAvailableChecker, _ := packages.NewUpdatesAvailableChecker(s.Packages)
+			updatesAvailableChecker.Start(ctx)
 		}()
 	}
 
