@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.2](https://github.com/soerenschneider/sc-agent/compare/v1.5.1...v1.5.2) (2024-10-11)
+
+
+### Bug Fixes
+
+* detect ubuntu and raspbian as debian derivates ([be580a5](https://github.com/soerenschneider/sc-agent/commit/be580a50d1b4afe9e408eb69688540a53388c1d1))
+* only build packages service by default if on a supported distribution ([a5226a0](https://github.com/soerenschneider/sc-agent/commit/a5226a086196cb53e3785187d8b5c26f59b9f13e))
+
 ## [1.5.1](https://github.com/soerenschneider/sc-agent/compare/v1.5.0...v1.5.1) (2024-10-11)
 
 
