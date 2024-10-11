@@ -7,6 +7,7 @@ import (
 	"github.com/soerenschneider/sc-agent/internal/services/components/conditional_reboot/agent"
 	"github.com/soerenschneider/sc-agent/internal/services/components/conditional_reboot/agent/preconditions"
 	"github.com/soerenschneider/sc-agent/internal/services/components/conditional_reboot/checkers"
+	"github.com/soerenschneider/sc-agent/internal/sysinfo"
 )
 
 func BuildAgent(c *config.AgentConf) (*agent.StatefulAgent, error) {
@@ -30,6 +31,13 @@ func BuildAgent(c *config.AgentConf) (*agent.StatefulAgent, error) {
 
 func BuildChecker(c *config.AgentConf) (agent.Checker, error) {
 	switch c.CheckerName {
+	case checkers.RebootCheckerName:
+		if sysinfo.Sysinfo.IsDebian() {
+			return checkers.NewRebootCheckerApt()
+		} else if sysinfo.Sysinfo.IsRedHat() {
+			return checkers.NewRebootCheckerDnf()
+		}
+		return nil, fmt.Errorf("unknown/unsupported system: %v", sysinfo.Sysinfo.OS)
 	case checkers.NeedrestartCheckerName:
 		return checkers.NeedrestartCheckerFromMap(c.CheckerArgs)
 	case checkers.FileCheckerName:
