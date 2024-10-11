@@ -10,6 +10,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/rs/zerolog/log"
 	"github.com/soerenschneider/sc-agent/internal/config/vault"
+	"github.com/soerenschneider/sc-agent/internal/sysinfo"
 	"golang.org/x/exp/maps"
 	"gopkg.in/yaml.v3"
 )
@@ -145,7 +146,7 @@ func getDefaultConfig() Config {
 			Enabled: runtime.GOOS == "linux",
 		},
 		Packages: &Packages{
-			Enabled: runtime.GOOS == "linux",
+			Enabled: sysinfo.Sysinfo.IsDebian() || sysinfo.Sysinfo.IsRedHat(),
 		},
 		PowerStatus: &PowerStatus{
 			Enabled: false,
