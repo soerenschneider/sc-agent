@@ -19,5 +19,6 @@ func (s *Sysinfo) IsDebian() bool {
 }
 
 func (s *Sysinfo) IsRedHat() bool {
-	return strings.Contains(strings.ToLower(s.OS.Name), "redhat")
+	osName := strings.ToLower(s.OS.Name)
+	return strings.Contains(osName, "redhat") || strings.Contains(osName, "rocky") || strings.Contains(osName, "alma")
 }
