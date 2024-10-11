@@ -40,7 +40,7 @@ git/jammy-updates,jammy-security 1:2.34.1-1ubuntu1.11 amd64 [upgradable from: 1:
 	}
 }
 
-func Test_parseAptListOutput(t *testing.T) {
+func Test_parseAptListInstalledOutput(t *testing.T) {
 	type args struct {
 		output string
 	}
@@ -65,7 +65,7 @@ func Test_parseAptListOutput(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := parseAptListOutput(tt.args.output); !reflect.DeepEqual(got, tt.want) {
+			if got := parseAptListInstalledOutput(tt.args.output); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parseAptListOutput() = %v, want %v", got, tt.want)
 			}
 		})
