@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -23,6 +24,7 @@ import (
 	"github.com/soerenschneider/sc-agent/internal/services/components/systemd"
 	"github.com/soerenschneider/sc-agent/internal/services/components/wol"
 	"github.com/soerenschneider/sc-agent/internal/storage"
+	"github.com/soerenschneider/sc-agent/internal/sysinfo"
 	"github.com/soerenschneider/sc-agent/pkg/reboot"
 	"go.uber.org/multierr"
 )
@@ -179,7 +181,16 @@ func buildPackages(conf config.Config) (ports.SystemPackages, error) {
 	if conf.Packages == nil || !conf.Packages.Enabled {
 		return nil, nil
 	}
-	return packages.NewDnf()
+
+	if sysinfo.Sysinfo.IsDebian() {
+		return packages.NewAptPackageManager()
+	}
+
+	if sysinfo.Sysinfo.IsRedHat() {
+		return packages.NewDnfPackageManager()
+	}
+
+	return nil, fmt.Errorf("unknown/unsupported system: %v", sysinfo.Sysinfo.OS)
 }
 
 func buildPowerstatus(conf config.Config) (ports.SystemPowerStatus, error) {
