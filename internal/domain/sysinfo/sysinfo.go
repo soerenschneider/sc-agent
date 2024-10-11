@@ -15,7 +15,8 @@ type OS struct {
 }
 
 func (s *Sysinfo) IsDebian() bool {
-	return strings.Contains(strings.ToLower(s.OS.Name), "debian")
+	osName := strings.ToLower(s.OS.Name)
+	return strings.Contains(osName, "debian") || strings.Contains(osName, "ubuntu") || strings.Contains(osName, "raspbian")
 }
 
 func (s *Sysinfo) IsRedHat() bool {
