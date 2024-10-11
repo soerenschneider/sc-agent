@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.5.0](https://github.com/soerenschneider/sc-agent/compare/v1.4.0...v1.5.0) (2024-10-11)
+
+
+### Features
+
+* add checker for required reboots based on os ([927ae91](https://github.com/soerenschneider/sc-agent/commit/927ae91652eb0fc34f3f9a0c6d90a7047902b0bc))
+* continuously check for available updates ([1f90f56](https://github.com/soerenschneider/sc-agent/commit/1f90f56db2832b82d31f6d6cb6addb197417cd63))
+* initial support for gathering system info ([5d539d0](https://github.com/soerenschneider/sc-agent/commit/5d539d0598ef1bad81a1b6e76de8353d8e82bd1a))
+* re-use storage backend to allow fine grained control over target file ([b3e2364](https://github.com/soerenschneider/sc-agent/commit/b3e23640d3498887deb5f23715308263a9cbe67b))
+* use existing storage backends for secrets replication ([128b61f](https://github.com/soerenschneider/sc-agent/commit/128b61fce96eb1e14ff8bb88a01673363d2f3578))
+
+
+### Bug Fixes
+
+* **deps:** bump github.com/getkin/kin-openapi from 0.127.0 to 0.128.0 ([569c64c](https://github.com/soerenschneider/sc-agent/commit/569c64c7038291a2f9bb60c6595119af1aeae012))
+* **deps:** bump github.com/prometheus/common from 0.59.1 to 0.60.0 ([2ec432e](https://github.com/soerenschneider/sc-agent/commit/2ec432e737ee562f06c849c343536e4cc67839ee))
+* **deps:** bump golang from 1.23.1 to 1.23.2 ([2609da1](https://github.com/soerenschneider/sc-agent/commit/2609da18469d5f93b25b51eeff1738e9683f172a))
+* **deps:** bump golang.org/x/crypto from 0.27.0 to 0.28.0 ([4206e4f](https://github.com/soerenschneider/sc-agent/commit/4206e4fb05356a9d18daa2f04bd4ff4579962905))
+* **deps:** bump golang.org/x/term from 0.24.0 to 0.25.0 ([aa02d59](https://github.com/soerenschneider/sc-agent/commit/aa02d59dc099594932991de9f29fad31cfc836c5))
+* prevent newly added destinations not being written to ([f6d1117](https://github.com/soerenschneider/sc-agent/commit/f6d11174fe0783d153e298c46b0d5dadd7bbec99))
+
 ## [1.4.0](https://github.com/soerenschneider/sc-agent/compare/v1.3.0...v1.4.0) (2024-10-04)
 
 
