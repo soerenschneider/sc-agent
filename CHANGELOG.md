@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/soerenschneider/sc-agent/compare/v1.5.0...v1.5.1) (2024-10-11)
+
+
+### Bug Fixes
+
+* detect alma linux and rocky linux as RHEL derivate ([5025005](https://github.com/soerenschneider/sc-agent/commit/50250054cc6c585bca89b108d8ca6cc7a67b6775))
+
 ## [1.5.0](https://github.com/soerenschneider/sc-agent/compare/v1.4.0...v1.5.0) (2024-10-11)
 
 
