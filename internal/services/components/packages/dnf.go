@@ -15,21 +15,21 @@ import (
 )
 
 const (
-	dnfServiceName = "dnf"
+	dnfSubcomponent = "dnf"
 )
 
 var dnfOutputRegex = regexp.MustCompile(`^(\S+)\s+(\S+)\s+(\S+)\s*$`)
 
-type Dnf struct {
+type DnfPackageManager struct {
 	useSudo      bool
 	upgradeMutex sync.Mutex
 }
 
-func NewDnf() (*Dnf, error) {
-	return &Dnf{}, nil
+func NewDnfPackageManager() (*DnfPackageManager, error) {
+	return &DnfPackageManager{}, nil
 }
 
-func (m *Dnf) ListInstalled() ([]domain.PackageInfo, error) {
+func (m *DnfPackageManager) ListInstalled() ([]domain.PackageInfo, error) {
 	cmd := []string{"dnf", "--color=never", "list", "--installed"}
 
 	var c *exec.Cmd
@@ -43,13 +43,16 @@ func (m *Dnf) ListInstalled() ([]domain.PackageInfo, error) {
 	c.Stdout = stdout
 
 	if err := c.Run(); err != nil {
-		log.Error().Err(err).Str("service", dnfServiceName).Msg("could not get list of installed packages")
+		log.Error().Err(err).Str("component", packageManagerComponent).Str("subcomponent", dnfSubcomponent).Msg("could not get list of installed packages")
 		return nil, err
 	}
-	return parseDnfListOutput(stdout.String()), nil
+
+	installed := parseDnfListOutput(stdout.String())
+	metrics.PackagesInstalled.Set(float64(len(installed)))
+	return installed, nil
 }
 
-func (m *Dnf) Upgrade() error {
+func (m *DnfPackageManager) Upgrade() error {
 	cmd := []string{"dnf", "--color=never", "upgrade", "-y"}
 
 	var c *exec.Cmd
@@ -64,23 +67,26 @@ func (m *Dnf) Upgrade() error {
 	go func() {
 		m.upgradeMutex.Lock()
 		defer m.upgradeMutex.Unlock()
-
+		log.Info().Str("component", packageManagerComponent).Str("subcomponent", dnfSubcomponent).Msg("start system upgrade")
 		if err := c.Start(); err != nil {
 			metrics.DnfErrors.WithLabelValues("Upgrade").Inc()
-			log.Error().Str("service", dnfServiceName).Err(err).Msg("error running upgrade")
+			log.Error().Str("component", packageManagerComponent).Str("subcomponent", dnfSubcomponent).Err(err).Msg("error running upgrade")
 		}
 
 		wg.Done()
 		if err := c.Wait(); err != nil {
 			metrics.DnfErrors.WithLabelValues("Upgrade").Inc()
-			log.Error().Str("service", dnfServiceName).Err(err).Msg("error running upgrade")
+			log.Error().Str("component", packageManagerComponent).Str("subcomponent", dnfSubcomponent).Err(err).Msg("error running upgrade")
+		} else {
+			log.Info().Str("component", packageManagerComponent).Str("subcomponent", dnfSubcomponent).Msg("upgrade successfully applied")
 		}
 	}()
 	wg.Wait()
 	return nil
 }
 
-func (m *Dnf) CheckUpdate() (domain.CheckUpdateResult, error) {
+func (m *DnfPackageManager) CheckUpdate() (domain.CheckUpdateResult, error) {
+	metrics.UpdateCheckAvailableTimestamp.SetToCurrentTime()
 	cmd := []string{"dnf", "--color=never", "check-update"}
 
 	var c *exec.Cmd
@@ -111,21 +117,21 @@ func (m *Dnf) CheckUpdate() (domain.CheckUpdateResult, error) {
 				result.UpdatesAvailable = true
 				packages, err := parseDnfCheckUpdateOutput(stdout.String())
 				if err != nil {
-					log.Error().Err(err).Msg("could not parse output of 'dnf check-update'")
+					log.Error().Err(err).Str("component", packageManagerComponent).Str("subcomponent", dnfSubcomponent).Msg("could not parse output of 'dnf check-update'")
 					return result, nil
 				}
 				metrics.UpdatesAvailable.Set(float64(len(packages)))
 				result.UpdatablePackages = packages
 				return result, nil
 			default:
-				log.Warn().Int("exitcode", exitError.ExitCode()).Msg("got unknown exitcode from running dnf check-update")
+				log.Warn().Str("component", packageManagerComponent).Str("subcomponent", dnfSubcomponent).Int("exitcode", exitError.ExitCode()).Msg("got unknown exitcode from running dnf check-update")
 			}
 		}
 	}
 
 	metrics.UpdatesAvailableBool.Set(0)
 	metrics.UpdatesAvailable.Set(0)
-	return result, err
+	return result, nil
 }
 
 func parseDnfCheckUpdateOutput(output string) ([]domain.PackageInfo, error) {
