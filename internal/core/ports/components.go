@@ -38,6 +38,10 @@ type Components struct {
 	Wol                WakeOnLan
 }
 
+func (s *Components) UsesVault() bool {
+	return s.SshCertificates != nil || s.Pki != nil || s.SecretsReplication != nil || s.Acme != nil
+}
+
 func (s *Components) StartServices(ctx context.Context, conf config.Config, scAgentFatalErrors chan error) {
 	if s.HttpReplication != nil {
 		go s.HttpReplication.StartReplication(ctx)
@@ -62,50 +66,50 @@ func (s *Components) StartServices(ctx context.Context, conf config.Config, scAg
 		}()
 	}
 
-	if s.SshCertificates != nil || s.Pki != nil || s.SecretsReplication != nil || s.Acme != nil {
-		vaultAuthReady := &sync.WaitGroup{}
-		vaultLogins := len(conf.Vault)
-		log.Info().Msgf("Waiting on %d Vault logins to succeed", vaultLogins)
-		vaultAuthReady.Add(vaultLogins)
-		vault.StartTokenRenewal(ctx, vaultAuthReady, scAgentFatalErrors)
-
-		// wait on all members of the waitgroup but end forcefully after the timeout has passed
-		vaultLoginWait := make(chan struct{})
-
-		go func() {
-			log.Info().Msg("Waiting for vault login to succeed...")
-			vaultAuthReady.Wait()
-			close(vaultLoginWait)
-		}()
-
-		select {
-		case <-vaultLoginWait:
-			log.Info().Str(logComponent, mainComponentName).Msg("All components shut down gracefully within the timeout")
-		case <-time.After(60 * time.Second):
-			log.Error().Str(logComponent, mainComponentName).Msg("Components could not be shutdown within timeout, killing process forcefully")
-		}
-
-		go func() {
-			log.Info().Str(logComponent, mainComponentName).Msg("vault login successful")
-			vault.StartApproleSecretIdRotation(ctx)
-			if s.SecretsReplication != nil {
-				log.Info().Str(logComponent, mainComponentName).Msg("starting continuous secret syncer process")
-				go s.SecretsReplication.StartContinuousReplication(ctx)
-			}
-			if s.SshCertificates != nil {
-				log.Info().Str(logComponent, mainComponentName).Msg("starting management of ssh certificates")
-				go s.SshCertificates.WatchCertificates(ctx)
-			}
-			if s.Pki != nil {
-				log.Info().Str(logComponent, mainComponentName).Msg("starting management of x509 certificates")
-				go s.Pki.WatchCertificates(ctx)
-			}
-			if s.Acme != nil {
-				log.Info().Str(logComponent, mainComponentName).Msg("starting management of acme certificates")
-				go s.Acme.WatchCertificates(ctx)
-			}
-		}()
+	if !s.UsesVault() {
+		return
 	}
+
+	vaultAuthReady := &sync.WaitGroup{}
+	vaultLogins := len(conf.Vault)
+	vaultAuthReady.Add(vaultLogins)
+	vault.StartTokenRenewal(ctx, vaultAuthReady, scAgentFatalErrors)
+
+	// wait on all members of the waitgroup but end forcefully after the timeout has passed
+	vaultLoginWait := make(chan struct{})
+
+	go func() {
+		log.Info().Str(logComponent, mainComponentName).Msgf("Waiting for %d Vault logins to succeed...", vaultLogins)
+		vaultAuthReady.Wait()
+		close(vaultLoginWait)
+	}()
+
+	select {
+	case <-vaultLoginWait:
+		log.Info().Str(logComponent, mainComponentName).Msg("Vault login successful")
+	case <-time.After(60 * time.Second):
+		log.Error().Str(logComponent, mainComponentName).Msg("Vault login exceeded timeout")
+	}
+
+	go func() {
+		vault.StartApproleSecretIdRotation(ctx)
+		if s.SecretsReplication != nil {
+			log.Info().Str(logComponent, mainComponentName).Msg("starting continuous secret syncer process")
+			go s.SecretsReplication.StartContinuousReplication(ctx)
+		}
+		if s.SshCertificates != nil {
+			log.Info().Str(logComponent, mainComponentName).Msg("starting management of ssh certificates")
+			go s.SshCertificates.WatchCertificates(ctx)
+		}
+		if s.Pki != nil {
+			log.Info().Str(logComponent, mainComponentName).Msg("starting management of x509 certificates")
+			go s.Pki.WatchCertificates(ctx)
+		}
+		if s.Acme != nil {
+			log.Info().Str(logComponent, mainComponentName).Msg("starting management of acme certificates")
+			go s.Acme.WatchCertificates(ctx)
+		}
+	}()
 }
 
 func (s *Components) EnabledComponents() []string {
