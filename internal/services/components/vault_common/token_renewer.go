@@ -43,8 +43,8 @@ func (t *TokenRenewer) StartTokenRenewal(ctx context.Context, wg *sync.WaitGroup
 	t.once.Do(func() {
 		successfulLogin := false
 
+		log.Info().Str("component", vaultTokenRenewerComponent).Str("client", t.clientName).Msg("Logging in to Vault")
 		for {
-			log.Info().Str("component", vaultTokenRenewerComponent).Msg("Logging in to VaultId")
 			vaultLoginResp, err := t.client.Auth().Login(ctx, t.auth)
 
 			if err != nil {
