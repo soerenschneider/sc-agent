@@ -32,6 +32,9 @@ type Config struct {
 	ConditionalReboot  *ConditionalRebootConfig  `yaml:"conditional_reboot"`
 	HttpReplication    *HttpReplication          `yaml:"http_replication"`
 
+	// VaultLoginTimeout is a duration-formatted string that
+	VaultLoginTimeout string `yaml:"vault_login_timeout" validate:"omitempty,duration"`
+
 	Vault map[string]vault.Vault `yaml:"vault"`
 
 	Metrics *Http `yaml:"metrics"`

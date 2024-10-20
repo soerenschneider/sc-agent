@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"sync"
 	"time"
@@ -13,8 +14,9 @@ import (
 )
 
 const (
-	logComponent      = "component"
-	mainComponentName = "main"
+	logComponent                    = "component"
+	mainComponentName               = "main"
+	maxDuration       time.Duration = 1<<63 - 1
 )
 
 var (
@@ -84,11 +86,19 @@ func (s *Components) StartServices(ctx context.Context, conf config.Config, scAg
 		close(vaultLoginWait)
 	}()
 
+	var timeout time.Duration
+	if conf.VaultLoginTimeout == "" {
+		timeout = maxDuration
+	} else {
+		timeout, _ = time.ParseDuration(conf.VaultLoginTimeout)
+	}
+
 	select {
 	case <-vaultLoginWait:
 		log.Info().Str(logComponent, mainComponentName).Msg("Vault login successful")
-	case <-time.After(60 * time.Second):
+	case <-time.After(timeout):
 		log.Error().Str(logComponent, mainComponentName).Msg("Vault login exceeded timeout")
+		scAgentFatalErrors <- errors.New("exceeded vault login timeout")
 	}
 
 	go func() {
