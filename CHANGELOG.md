@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/soerenschneider/sc-agent/compare/v1.5.2...v1.6.0) (2024-10-20)
+
+
+### Features
+
+* increase resilience by adding optional timeout for vault login ([7fbddba](https://github.com/soerenschneider/sc-agent/commit/7fbddba6fa47756939f398445a07eac298183eaa))
+
 ## [1.5.2](https://github.com/soerenschneider/sc-agent/compare/v1.5.1...v1.5.2) (2024-10-11)
 
 
