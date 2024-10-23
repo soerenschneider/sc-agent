@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/soerenschneider/sc-agent/compare/v1.6.0...v1.6.1) (2024-10-23)
+
+
+### Bug Fixes
+
+* **deps:** bump github.com/prometheus/client_golang ([d71cd73](https://github.com/soerenschneider/sc-agent/commit/d71cd73b9443b13b0931b25e87ea048ca874454d))
+
 ## [1.6.0](https://github.com/soerenschneider/sc-agent/compare/v1.5.2...v1.6.0) (2024-10-20)
 
 
