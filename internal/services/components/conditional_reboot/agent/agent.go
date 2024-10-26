@@ -8,7 +8,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/soerenschneider/sc-agent/internal/config"
 	"github.com/soerenschneider/sc-agent/internal/metrics"
-	"github.com/soerenschneider/sc-agent/internal/services/components/conditional_reboot/agent/preconditions"
 	"github.com/soerenschneider/sc-agent/internal/services/components/conditional_reboot/agent/state"
 
 	"sync"
@@ -20,9 +19,15 @@ type Checker interface {
 	Name() string
 }
 
+// Precondition defines a condition that has to be met before a Checker is even executed.
+type Precondition interface {
+	// PerformCheck returns true if the Agent should continue with performing its configured Checker
+	PerformCheck() bool
+}
+
 type StatefulAgent struct {
 	checker       Checker
-	precondition  preconditions.Precondition
+	precondition  Precondition
 	checkInterval time.Duration
 
 	//durationUntilRecovered specifies the duration that the state "recovering" needs to be in to become "healthy" again.
@@ -36,7 +41,7 @@ type StatefulAgent struct {
 	mutex           sync.RWMutex
 }
 
-func NewAgent(checker Checker, precondition preconditions.Precondition, conf *config.AgentConf) (*StatefulAgent, error) {
+func NewAgent(checker Checker, precondition Precondition, conf *config.AgentConf) (*StatefulAgent, error) {
 	if checker == nil {
 		return nil, errors.New("could not build agent: empty checker supplied")
 	}
