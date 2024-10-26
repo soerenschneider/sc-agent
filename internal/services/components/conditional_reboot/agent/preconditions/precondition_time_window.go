@@ -89,25 +89,37 @@ func WindowPreconditionFromMap(args map[string]any) (*WindowedPrecondition, erro
 		return nil, errors.New("empty args provided")
 	}
 
-	fromStr, ok := args["from"].(string)
+	fromRaw, ok := args["from"]
 	if !ok {
 		return nil, errors.New("no 'from' specified")
 	}
-	fromParsed, err := extractHourAndMinute(fromStr)
+
+	fromParsed, err := extractHourAndMinute(parse(fromRaw))
 	if err != nil {
 		return nil, err
 	}
 
-	toStr, ok := args["to"].(string)
+	toRaw, ok := args["to"]
 	if !ok {
 		return nil, errors.New("no 'to' specified")
 	}
-	toParsed, err := extractHourAndMinute(toStr)
+	toParsed, err := extractHourAndMinute(parse(toRaw))
 	if err != nil {
 		return nil, err
 	}
 
 	return NewWindowPrecondition(fromParsed, toParsed)
+}
+
+func parse(value any) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case int:
+		return fmt.Sprintf("%d", v)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
 
 func (c *WindowedPrecondition) PerformCheck() bool {

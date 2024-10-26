@@ -16,6 +16,7 @@ import (
 	"go.uber.org/multierr"
 )
 
+// defaultSafeMinimumSystemUptime prevents reboot loops
 const defaultSafeMinimumSystemUptime = 4 * time.Hour
 
 type ConditionalReboot struct {
@@ -69,7 +70,7 @@ func NewConditionalReboot(groups []*group.Group, rebootImpl Reboot, rebootReq ch
 func (app *ConditionalReboot) IsSafeSystemBootUptimeReached() bool {
 	systemUptime, err := uptime.Uptime()
 	if err != nil {
-		log.Error().Err(err).Msgf("could not determine system uptime, rebooting anyway: %v", err)
+		log.Error().Err(err).Str("component", "conditional-reboot").Msgf("could not determine system uptime, rebooting anyway: %v", err)
 		return true
 	}
 
@@ -89,18 +90,18 @@ func (app *ConditionalReboot) Start() error {
 		select {
 		case <-sig:
 			cancel()
-			log.Info().Msgf("Received signal, cancelling..")
+			log.Info().Str("component", "conditional-reboot").Msgf("Received signal, cancelling..")
 			return nil
 
 		case group := <-app.rebootRequest:
-			log.Info().Msgf("Reboot request from group '%s'", group.GetName())
+			log.Info().Str("component", "conditional-reboot").Msgf("Reboot request from group '%s'", group.GetName())
 			cancel()
 			// TODO: Get rid of lazy way, use waitgroups?!
 			time.Sleep(5 * time.Second)
 			err := app.tryReboot(group)
 			if err != nil {
 				metrics.RebootErrors.Set(1)
-				log.Error().Err(err).Msg("Reboot failed")
+				log.Error().Str("component", "conditional-reboot").Err(err).Msg("Reboot failed")
 			}
 
 			return err
@@ -168,17 +169,17 @@ var once sync.Once
 
 func (app *ConditionalReboot) tryReboot(group *group.Group) error {
 	if app.ignoreRebootRequests.Load() {
-		log.Warn().Msg("Ignoring request to reboot as reboot is currently in pause mode")
+		log.Warn().Str("component", "conditional-reboot").Msg("Ignoring request to reboot as reboot is currently in pause mode")
 	}
 
 	if !app.IsSafeSystemBootUptimeReached() {
 		once.Do(func() {
-			log.Warn().Msgf("Refusing to reboot, safe minimum system uptime (%s) not reached yet", defaultSafeMinimumSystemUptime)
+			log.Warn().Str("component", "conditional-reboot").Msgf("Refusing to reboot, safe minimum system uptime (%s) not reached yet", defaultSafeMinimumSystemUptime)
 		})
 
 		return nil
 	}
 
-	log.Info().Msg("Trying to reboot...")
+	log.Info().Str("component", "conditional-reboot").Msg("Trying to reboot...")
 	return app.rebootImpl.Reboot()
 }

@@ -37,6 +37,6 @@ func (s *InitialState) Success() {
 }
 
 func (s *InitialState) Error(err error) {
-	log.Error().Err(err).Msgf("'%s' encountered error", s.stateful.CheckerNiceName())
+	log.Error().Str("component", "conditional-reboot").Err(err).Msgf("'%s' encountered error", s.stateful.CheckerNiceName())
 	s.stateful.SetState(&ErrorState{stateful: s.stateful})
 }

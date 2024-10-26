@@ -109,7 +109,7 @@ func (c *PrometheusChecker) LoadTlsClientCerts(info *tls.CertificateRequestInfo)
 
 	certificate, err := tls.LoadX509KeyPair(c.clientCertFile, c.clientKeyFile)
 	if err != nil {
-		log.Error().Err(err).Msg("user-defined client certificates could not be loaded")
+		log.Error().Str("component", "conditional-reboot").Err(err).Msg("user-defined client certificates could not be loaded")
 	}
 	return &certificate, err
 }
@@ -153,7 +153,7 @@ func (c *PrometheusChecker) query(ctx context.Context, name, query string) (bool
 	c.prevailingErrorsSince = nil
 
 	if len(warnings) > 0 {
-		log.Warn().Str("checker", "prometheus").Msgf("warning for query '%s': %v", name, warnings)
+		log.Warn().Str("component", "conditional-reboot").Str("checker", "prometheus").Msgf("warning for query '%s': %v", name, warnings)
 	}
 
 	vec := result.(model.Vector)
@@ -173,20 +173,20 @@ type ZerologAdapter struct {
 
 // Debug logs a debug-level message
 func (z *ZerologAdapter) Debug(msg string, keysAndValues ...interface{}) {
-	log.Debug().Str("checker", "prometheus").Interface("details", keysAndValues).Msg(msg)
+	log.Debug().Str("component", "conditional-reboot").Str("checker", "prometheus").Interface("details", keysAndValues).Msg(msg)
 }
 
 // Info logs an info-level message
 func (z *ZerologAdapter) Info(msg string, keysAndValues ...interface{}) {
-	log.Info().Str("checker", "prometheus").Interface("details", keysAndValues).Msg(msg)
+	log.Info().Str("component", "conditional-reboot").Str("checker", "prometheus").Interface("details", keysAndValues).Msg(msg)
 }
 
 // Warn logs a warning-level message
 func (z *ZerologAdapter) Warn(msg string, keysAndValues ...interface{}) {
-	log.Warn().Str("checker", "prometheus").Interface("details", keysAndValues).Msg(msg)
+	log.Warn().Str("component", "conditional-reboot").Str("checker", "prometheus").Interface("details", keysAndValues).Msg(msg)
 }
 
 // Error logs an error-level message
 func (z *ZerologAdapter) Error(msg string, keysAndValues ...interface{}) {
-	log.Error().Str("checker", "prometheus").Interface("details", keysAndValues).Msg(msg)
+	log.Error().Str("component", "conditional-reboot").Str("checker", "prometheus").Interface("details", keysAndValues).Msg(msg)
 }

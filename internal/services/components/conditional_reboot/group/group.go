@@ -54,7 +54,7 @@ func (g *Group) Start(ctx context.Context) {
 	for _, agent := range g.agents {
 		go func(a state.Agent) {
 			if err := a.Run(ctx, agentUpdates); err != nil {
-				log.Fatal().Err(err).Msgf("could start agent %s", a.CheckerNiceName())
+				log.Fatal().Str("component", "conditional-reboot").Err(err).Msgf("could start agent %s", a.CheckerNiceName())
 			}
 		}(agent)
 	}
@@ -65,18 +65,18 @@ func (g *Group) Start(ctx context.Context) {
 		for {
 			select {
 			case agent := <-agentUpdates:
-				log.Info().Msgf("Received update from agent %s", agent.CheckerNiceName())
+				log.Info().Str("component", "conditional-reboot").Msgf("Received update from agent %s", agent.CheckerNiceName())
 				if g.stateEvaluator.ShouldReboot(g) {
 					log.Debug().Msgf("Reboot checker returned true")
 					g.rebootRequests <- g
 				}
-				log.Debug().Msgf("Reboot checker returned false")
+				log.Debug().Str("component", "conditional-reboot").Msgf("Reboot checker returned false")
 			case <-ticker.C:
 				if g.stateEvaluator.ShouldReboot(g) {
-					log.Debug().Msgf("Reboot checker ticker returned true")
+					log.Debug().Str("component", "conditional-reboot").Msgf("Reboot checker ticker returned true")
 					g.rebootRequests <- g
 				}
-				log.Debug().Msgf("Reboot checker ticker returned false")
+				log.Debug().Str("component", "conditional-reboot").Msgf("Reboot checker ticker returned false")
 			case <-ctx.Done():
 				ticker.Stop()
 				return

@@ -15,3 +15,10 @@ func SafeMinSystemUptime(duration time.Duration) ConditionalRebootOpts {
 		return nil
 	}
 }
+
+func DryRun() ConditionalRebootOpts {
+	return func(c *ConditionalReboot) error {
+		c.ignoreRebootRequests.Store(true)
+		return nil
+	}
+}

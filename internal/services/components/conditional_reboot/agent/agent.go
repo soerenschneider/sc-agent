@@ -104,18 +104,18 @@ func (a *StatefulAgent) Run(ctx context.Context, stateUpdateChannel chan state.A
 }
 
 func (a *StatefulAgent) performCheck(ctx context.Context) {
-	log.Debug().Msgf("performCheck() %s", a.CheckerNiceName())
+	log.Debug().Str("component", "conditional-reboot").Msgf("performCheck() %s", a.CheckerNiceName())
 	if !a.precondition.PerformCheck() {
-		log.Debug().Msgf("Precondition not met, not invoking checker %s", a.CheckerNiceName())
+		log.Debug().Str("component", "conditional-reboot").Msgf("Precondition not met, not invoking checker %s", a.CheckerNiceName())
 		return
 	}
 
 	metrics.CheckerLastCheck.WithLabelValues(a.checker.Name()).SetToCurrentTime()
 
-	log.Debug().Msgf("IsHealthy() %s", a.CheckerNiceName())
+	log.Debug().Str("component", "conditional-reboot").Msgf("IsHealthy() %s", a.CheckerNiceName())
 	isHealthy, err := a.checker.IsHealthy(ctx)
 	if err != nil {
-		log.Warn().Str("checker", a.CheckerNiceName()).Msg("can not determine healthiness")
+		log.Warn().Str("component", "conditional-reboot").Str("checker", a.CheckerNiceName()).Msg("can not determine healthiness")
 		a.state.Error(err)
 		metrics.CheckerState.WithLabelValues(a.checker.Name(), "err").Set(1)
 		metrics.CheckerState.WithLabelValues(a.checker.Name(), "healthy").Set(0)
@@ -124,13 +124,13 @@ func (a *StatefulAgent) performCheck(ctx context.Context) {
 	}
 
 	if isHealthy {
-		log.Debug().Str("checker", a.CheckerNiceName()).Msg("is healthy")
+		log.Debug().Str("component", "conditional-reboot").Str("checker", a.CheckerNiceName()).Msg("is healthy")
 		a.state.Success()
 		metrics.CheckerState.WithLabelValues(a.checker.Name(), "err").Set(0)
 		metrics.CheckerState.WithLabelValues(a.checker.Name(), "healthy").Set(1)
 		metrics.CheckerState.WithLabelValues(a.checker.Name(), "unhealthy").Set(0)
 	} else {
-		log.Debug().Str("checker", a.CheckerNiceName()).Msg("is UNHEALTHY!")
+		log.Debug().Str("component", "conditional-reboot").Str("checker", a.CheckerNiceName()).Msg("is UNHEALTHY!")
 		a.state.Failure()
 		metrics.CheckerState.WithLabelValues(a.checker.Name(), "err").Set(0)
 		metrics.CheckerState.WithLabelValues(a.checker.Name(), "healthy").Set(0)
@@ -139,22 +139,22 @@ func (a *StatefulAgent) performCheck(ctx context.Context) {
 }
 
 func (a *StatefulAgent) SetState(newState state.State) {
-	log.Info().Msgf("Updating state for checker '%s' from '%s' -> '%s'", a.checker.Name(), a.state.Name(), newState.Name())
+	log.Info().Str("component", "conditional-reboot").Msgf("Updating state for checker '%s' from '%s' -> '%s'", a.checker.Name(), a.state.Name(), newState.Name())
 
 	metrics.AgentState.WithLabelValues(string(newState.Name()), a.CheckerNiceName()).Set(1)
 	metrics.AgentState.WithLabelValues(string(a.state.Name()), a.CheckerNiceName()).Set(0)
 	metrics.LastStateChange.WithLabelValues(string(a.state.Name()), a.CheckerNiceName()).SetToCurrentTime()
 
-	log.Debug().Str("checker", a.CheckerNiceName()).Msgf("SetState(%s) acquire lock", newState.Name())
+	log.Debug().Str("component", "conditional-reboot").Str("checker", a.CheckerNiceName()).Msgf("SetState(%s) acquire lock", newState.Name())
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	log.Debug().Str("checker", a.CheckerNiceName()).Msgf("SetState(%s) success", newState.Name())
+	log.Debug().Str("component", "conditional-reboot").Str("checker", a.CheckerNiceName()).Msgf("SetState(%s) success", newState.Name())
 
 	a.lastStateChange = time.Now()
 	a.state = newState
-	log.Debug().Msgf("Updating channel %s", a.checker.Name())
+	log.Debug().Str("component", "conditional-reboot").Msgf("Updating channel %s", a.checker.Name())
 	a.updateChannel <- a
-	log.Debug().Msgf("Updated channel %s", a.checker.Name())
+	log.Debug().Str("component", "conditional-reboot").Msgf("Updated channel %s", a.checker.Name())
 }
 
 func (a *StatefulAgent) String() string {
@@ -174,10 +174,10 @@ func (a *StatefulAgent) StreakUntilRebootState() int {
 }
 
 func (a *StatefulAgent) GetState() state.State {
-	log.Debug().Msgf("GetState() acquire lock (%s)", a.CheckerNiceName())
+	log.Debug().Str("component", "conditional-reboot").Msgf("GetState() acquire lock (%s)", a.CheckerNiceName())
 	a.mutex.RLock()
 	defer a.mutex.RUnlock()
-	log.Debug().Msgf("GetState() lock success (%s)", a.CheckerNiceName())
+	log.Debug().Str("component", "conditional-reboot").Msgf("GetState() lock success (%s)", a.CheckerNiceName())
 
 	return a.state
 }

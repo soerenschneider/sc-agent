@@ -45,7 +45,7 @@ func NewKafkaChecker(brokers []string, topic string, opts ...KafkaOpts) (*KafkaC
 func getDefaultAcceptedKeys() (acceptedKeys []string) {
 	systemHostname, err := os.Hostname()
 	if err != nil {
-		log.Warn().Err(err).Msg("could not auto-detect system hostname for kafka's accepted keys")
+		log.Warn().Str("component", "conditional-reboot").Err(err).Msg("could not auto-detect system hostname for kafka's accepted keys")
 		return
 	}
 

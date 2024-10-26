@@ -44,9 +44,10 @@ func (r *RebootCheckerDnf) IsHealthy(ctx context.Context) (bool, error) {
 		if errors.As(err, &exitError) {
 			switch exitError.ExitCode() {
 			case 1:
+				log.Info().Str("component", "conditional-reboot").Str("component", "conditional-reboot").Str("checker", "reboot-dnf").Msg(stdout.String())
 				return false, nil
 			default:
-				log.Warn().Int("exitcode", exitError.ExitCode()).Msg("got unknown exitcode from running dnf needs-restarting")
+				log.Warn().Str("component", "conditional-reboot").Int("exitcode", exitError.ExitCode()).Msg("got unknown exitcode from running dnf needs-restarting")
 			}
 		}
 	}

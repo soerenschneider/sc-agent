@@ -35,9 +35,9 @@ func (r *StateCheckerOr) ShouldReboot(group Group) bool {
 func (r *StateCheckerOr) CheckAgent(agent state.Agent) bool {
 	currentState := agent.GetState().Name()
 	for wantedType, wantedFor := range r.wants {
-		log.Debug().Str("checker", StateCheckerOrName).Str("agent", agent.CheckerNiceName()).Msgf("wanted=%s, wantedFor=%v", wantedType, wantedFor)
+		log.Debug().Str("component", "conditional-reboot").Str("checker", StateCheckerOrName).Str("agent", agent.CheckerNiceName()).Msgf("wanted=%s, wantedFor=%v", wantedType, wantedFor)
 		if currentState == wantedType {
-			log.Debug().Str("checker", StateCheckerOrName).Str("agent", agent.CheckerNiceName()).Msgf("currentState=%s, duration=%v", currentState, agent.GetStateDuration())
+			log.Debug().Str("component", "conditional-reboot").Str("checker", StateCheckerOrName).Str("agent", agent.CheckerNiceName()).Msgf("currentState=%s, duration=%v", currentState, agent.GetStateDuration())
 			if agent.GetStateDuration() >= wantedFor {
 				return true
 			}

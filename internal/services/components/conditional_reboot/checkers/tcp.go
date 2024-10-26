@@ -61,16 +61,16 @@ func (c *TcpChecker) IsHealthy(ctx context.Context) (bool, error) {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(c.host, c.port), timeout)
 	if err == nil && conn != nil {
 		defer conn.Close()
-		log.Debug().Str("checker", "tcp").Msgf("Connecting to %s succeeded", c.Name())
+		log.Debug().Str("component", "conditional-reboot").Str("checker", "tcp").Msgf("Connecting to %s succeeded", c.Name())
 		return true, nil
 	}
 
 	if errors.Is(err, syscall.ECONNREFUSED) {
 		// receiving this error means the remote system replied
-		log.Warn().Str("checker", "tcp").Err(err).Msgf("Review configuration, connection refused to %s", c.Name())
+		log.Warn().Str("component", "conditional-reboot").Str("checker", "tcp").Err(err).Msgf("Review configuration, connection refused to %s", c.Name())
 		return true, nil
 	}
 
-	log.Error().Str("checker", "tcp").Err(err).Msgf("Connectivity checker '%s' encountered errors", c.Name())
+	log.Error().Str("component", "conditional-reboot").Str("checker", "tcp").Err(err).Msgf("Connectivity checker '%s' encountered errors", c.Name())
 	return false, nil
 }

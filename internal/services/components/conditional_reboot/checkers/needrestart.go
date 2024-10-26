@@ -109,19 +109,19 @@ func (n *NeedrestartChecker) detectUpdates(out string) (bool, bool) {
 	if len(matches) >= 2 {
 		val, err := strconv.Atoi(matches[1])
 		if err != nil {
-			log.Error().Str("checker", "needrestart").Msgf("could not parse 'NEEDRESTART-KSTA': %v", err)
+			log.Error().Str("component", "conditional-reboot").Str("checker", "needrestart").Msgf("could not parse 'NEEDRESTART-KSTA': %v", err)
 		} else if val > n.rebootMinKsta {
 			kernelUpdate = true
-			log.Info().Str("checker", "needrestart").Int("KSTA", val).Msg("Kernel updates detected")
+			log.Info().Str("component", "conditional-reboot").Str("checker", "needrestart").Int("KSTA", val).Msg("Kernel updates detected")
 		}
 	} else {
-		log.Warn().Str("checker", "needrestart").Msg("Could not find KSTA information")
+		log.Warn().Str("component", "conditional-reboot").Str("checker", "needrestart").Msg("Could not find KSTA information")
 	}
 
 	// check for service upgrades
 	if strings.Contains(out, "NEEDRESTART-SVC:") {
 		svcUpdates = true
-		log.Info().Str("checker", "needrestart").Msg("Service updates detected")
+		log.Info().Str("component", "conditional-reboot").Str("checker", "needrestart").Msg("Service updates detected")
 	}
 
 	return kernelUpdate, svcUpdates
