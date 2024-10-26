@@ -2,6 +2,8 @@ package checkers
 
 import (
 	"errors"
+	"fmt"
+	"time"
 )
 
 func ExceptsResponse(expectsResponse bool) PrometheusOpts {
@@ -15,6 +17,24 @@ func UseTls(certFile, keyFile string) PrometheusOpts {
 	return func(checker *PrometheusChecker) error {
 		checker.clientCertFile = certFile
 		checker.clientKeyFile = keyFile
+		return nil
+	}
+}
+
+func ErrorThreshold(threshold time.Duration) PrometheusOpts {
+	return func(checker *PrometheusChecker) error {
+		if threshold < time.Hour {
+			return errors.New("threshold must be greater than 1 hour")
+		}
+
+		checker.prevailingErrorThreshold = &threshold
+		return nil
+	}
+}
+
+func ErrorThresholdExceededDefaultResponse(defaultResponse bool) PrometheusOpts {
+	return func(checker *PrometheusChecker) error {
+		checker.prevailingErrorsResponse = defaultResponse
 		return nil
 	}
 }
@@ -60,6 +80,20 @@ func PrometheusCheckerFromMap(args map[string]any) (*PrometheusChecker, error) {
 	clientKey, okKey := args["tls_client_key"].(string)
 	if okCert && okKey {
 		opts = append(opts, UseTls(clientCert, clientKey))
+	}
+
+	errorThresholdRaw, ok := args["error_threshold"].(string)
+	if ok {
+		errorThresholdDuration, err := time.ParseDuration(errorThresholdRaw)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse error_threshold as duration: %s", errorThresholdRaw)
+		}
+		opts = append(opts, ErrorThreshold(errorThresholdDuration))
+	}
+
+	errorThresholdDefaultResponse, ok := args["error_threshold_response"].(bool)
+	if ok {
+		opts = append(opts, ErrorThresholdExceededDefaultResponse(errorThresholdDefaultResponse))
 	}
 
 	return NewPrometheusChecker(name, address, queriesMap, opts...)

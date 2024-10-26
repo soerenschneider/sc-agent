@@ -33,6 +33,10 @@ type PrometheusChecker struct {
 	clientCertFile string
 	clientKeyFile  string
 	wantResponse   bool
+
+	prevailingErrorThreshold *time.Duration
+	prevailingErrorsSince    *time.Time
+	prevailingErrorsResponse bool
 }
 
 type PrometheusOpts func(checker *PrometheusChecker) error
@@ -119,6 +123,12 @@ func (c *PrometheusChecker) IsHealthy(ctx context.Context) (bool, error) {
 	for name, query := range c.queries {
 		result, err := c.query(ctx, name, query)
 		if err != nil {
+			// if we're consecutively receiving errors only and a threshold is defined, check if we exhausted it.
+			// this is to prevent prevailing errors stopping an entire Group to work properly.
+			if c.prevailingErrorsSince != nil && c.prevailingErrorThreshold != nil && time.Since(*c.prevailingErrorsSince) > *c.prevailingErrorThreshold {
+				return c.prevailingErrorsResponse, nil
+			}
+
 			return false, fmt.Errorf("query '%s' returned error: %w", name, err)
 		}
 
@@ -132,10 +142,15 @@ func (c *PrometheusChecker) IsHealthy(ctx context.Context) (bool, error) {
 }
 
 func (c *PrometheusChecker) query(ctx context.Context, name, query string) (bool, error) {
-	result, warnings, err := c.client.Query(ctx, query, time.Now(), v1.WithTimeout(5*time.Second))
+	result, warnings, err := c.client.Query(ctx, query, time.Now(), v1.WithTimeout(15*time.Second))
 	if err != nil {
+		// keep track how long we receive errors
+		now := time.Now()
+		c.prevailingErrorsSince = &now
 		return false, err
 	}
+	// clear the timestamp
+	c.prevailingErrorsSince = nil
 
 	if len(warnings) > 0 {
 		log.Warn().Str("checker", "prometheus").Msgf("warning for query '%s': %v", name, warnings)
