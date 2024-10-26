@@ -55,7 +55,7 @@ func BuildChecker(c *config.AgentConf) (agent.Checker, error) {
 	return nil, fmt.Errorf("unknown checker: %s", c.CheckerName)
 }
 
-func BuildPrecondition(c *config.AgentConf) (preconditions.Precondition, error) {
+func BuildPrecondition(c *config.AgentConf) (agent.Precondition, error) {
 	switch c.PreconditionName {
 	case preconditions.WindowedPreconditionName:
 		return preconditions.WindowPreconditionFromMap(c.PreconditionArgs)
