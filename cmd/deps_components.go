@@ -163,6 +163,9 @@ func buildConditionalReboot(config config.Config) (ports.ConditionalReboot, erro
 	rebootImpl := &reboot.DefaultRebootImpl{}
 
 	var opts []app.ConditionalRebootOpts
+	if config.ConditionalReboot.DryRun {
+		opts = append(opts, app.DryRun())
+	}
 	app, err := app.NewConditionalReboot(groups, rebootImpl, groupUpdates, opts...)
 	if err != nil {
 		return nil, err

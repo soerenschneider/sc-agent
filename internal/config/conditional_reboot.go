@@ -16,6 +16,7 @@ type ConditionalRebootConfig struct {
 	Enabled     bool        `yaml:"enabled"`
 	Groups      []GroupConf `yaml:"groups" validate:"dive,required"`
 	JournalFile string      `yaml:"journal_file" validate:"omitempty,filepath"`
+	DryRun      bool        `yaml:"dry_run"`
 }
 
 func (conf *ConditionalRebootConfig) Print() {
