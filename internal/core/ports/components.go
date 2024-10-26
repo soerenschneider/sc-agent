@@ -26,7 +26,7 @@ var (
 
 type Components struct {
 	Acme               Acme
-	ConditionalReboot  ConditionalReboot
+	RebootManager      RebootManager
 	HttpReplication    HttpReplication
 	K0s                K0s
 	Libvirt            Libvirt
@@ -49,9 +49,9 @@ func (s *Components) StartServices(ctx context.Context, conf config.Config, scAg
 		go s.HttpReplication.StartReplication(ctx)
 	}
 
-	if s.ConditionalReboot != nil {
+	if s.RebootManager != nil {
 		go func() {
-			_ = s.ConditionalReboot.Start()
+			_ = s.RebootManager.Start()
 		}()
 	}
 

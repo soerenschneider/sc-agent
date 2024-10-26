@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/rs/zerolog/log"
-	"github.com/soerenschneider/sc-agent/internal/services/components/conditional_reboot/agent/state"
+	"github.com/soerenschneider/sc-agent/internal/services/components/reboot_manager/agent/state"
 	"gopkg.in/yaml.v3"
 )
 
@@ -12,14 +12,14 @@ const (
 	defaultStateEvaluatorName = "or"
 )
 
-type ConditionalRebootConfig struct {
+type RebootManagerConfig struct {
 	Enabled     bool        `yaml:"enabled"`
 	Groups      []GroupConf `yaml:"groups" validate:"dive,required"`
 	JournalFile string      `yaml:"journal_file" validate:"omitempty,filepath"`
 	DryRun      bool        `yaml:"dry_run"`
 }
 
-func (conf *ConditionalRebootConfig) Print() {
+func (conf *RebootManagerConfig) Print() {
 	log.Info().Msg("Active config values:")
 	for _, group := range conf.Groups {
 		log.Info().Msgf("Group '%s', stateEvaluator='%s', stateEvaluatorArgs=%v", group.Name, group.StateEvaluatorName, group.StateEvaluatorArgs)

@@ -29,7 +29,7 @@ type Config struct {
 	SecretsReplication *vault.SecretsReplication `yaml:"secrets_replication"`
 	SshSigner          *vault.SshPki             `yaml:"ssh_pki"`
 	X509Pki            *vault.X509Pki            `yaml:"x509_pki"`
-	ConditionalReboot  *ConditionalRebootConfig  `yaml:"conditional_reboot"`
+	RebootManager      *RebootManagerConfig      `yaml:"reboot_manager"`
 	HttpReplication    *HttpReplication          `yaml:"http_replication"`
 
 	// VaultLoginTimeout is a duration-formatted string that

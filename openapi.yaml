@@ -486,11 +486,11 @@ paths:
         '501':
           $ref: '#/components/responses/NotImplemented'
 
-  /v1/power-state/conditional-reboot:
+  /v1/power-state/reboot-manager:
     put:
-      operationId: powerConditionalRebootPostStatus
+      operationId: powerRebootManagerPostStatus
       summary: Unpause reboot status
-      description: Set the pause status of the conditional reboot service
+      description: Set the pause status of the reboot manager service
       tags:
         - power
       parameters:
@@ -503,7 +503,7 @@ paths:
               - "pause"
               - "unpause"
           example: "pause"
-          description: Action to perform for the conditional-reboot service
+          description: Action to perform for the reboot-manager service
       responses:
         '200':
           description: Reboot status unpaused
@@ -516,9 +516,9 @@ paths:
         '501':
           $ref: '#/components/responses/NotImplemented'
 
-  /v1/power-state/conditional-reboot/status:
+  /v1/power-state/reboot-manager/status:
     get:
-      operationId: powerConditionalRebootGetStatus
+      operationId: powerRebootManagerGetStatus
       summary: Get reboot status
       description: Return the current reboot status.
       tags:

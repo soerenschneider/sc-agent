@@ -28,13 +28,13 @@ func (s *HttpServer) PowerPostAction(w http.ResponseWriter, r *http.Request, par
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *HttpServer) PowerConditionalRebootGetStatus(w http.ResponseWriter, r *http.Request) {
-	if s.services.ConditionalReboot == nil {
+func (s *HttpServer) PowerRebootManagerGetStatus(w http.ResponseWriter, r *http.Request) {
+	if s.services.RebootManager == nil {
 		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
 		return
 	}
 
-	data := s.services.ConditionalReboot.Status()
+	data := s.services.RebootManager.Status()
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -45,19 +45,19 @@ func (s *HttpServer) PowerConditionalRebootGetStatus(w http.ResponseWriter, r *h
 	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(jsonData)
 	if err != nil {
-		log.Error().Err(err).Str("endpoint", "handleConditionalReboot").Msg("error delivering response")
+		log.Error().Err(err).Str("endpoint", "PowerRebootManagerGetStatus").Msg("error delivering response")
 	}
 }
 
-func (s *HttpServer) PowerConditionalRebootPostStatus(w http.ResponseWriter, r *http.Request, params PowerConditionalRebootPostStatusParams) {
-	if s.services.ConditionalReboot == nil {
+func (s *HttpServer) PowerRebootManagerPostStatus(w http.ResponseWriter, r *http.Request, params PowerRebootManagerPostStatusParams) {
+	if s.services.RebootManager == nil {
 		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
 		return
 	}
 
 	if params.Action == Pause {
-		s.services.ConditionalReboot.Pause()
+		s.services.RebootManager.Pause()
 	} else if params.Action == Unpause {
-		s.services.ConditionalReboot.Unpause()
+		s.services.RebootManager.Unpause()
 	}
 }

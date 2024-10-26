@@ -7,18 +7,18 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
-	deps "github.com/soerenschneider/sc-agent/cmd/conditional_reboot"
+	deps "github.com/soerenschneider/sc-agent/cmd/reboot_manager"
 	"github.com/soerenschneider/sc-agent/cmd/vault"
 	"github.com/soerenschneider/sc-agent/internal"
 	"github.com/soerenschneider/sc-agent/internal/config"
 	"github.com/soerenschneider/sc-agent/internal/core/ports"
 	"github.com/soerenschneider/sc-agent/internal/domain"
 	"github.com/soerenschneider/sc-agent/internal/domain/http_replication"
-	"github.com/soerenschneider/sc-agent/internal/services/components/conditional_reboot/app"
-	"github.com/soerenschneider/sc-agent/internal/services/components/conditional_reboot/group"
 	http_replication2 "github.com/soerenschneider/sc-agent/internal/services/components/http_replication"
 	"github.com/soerenschneider/sc-agent/internal/services/components/libvirt"
 	"github.com/soerenschneider/sc-agent/internal/services/components/packages"
+	"github.com/soerenschneider/sc-agent/internal/services/components/reboot_manager/app"
+	"github.com/soerenschneider/sc-agent/internal/services/components/reboot_manager/group"
 	"github.com/soerenschneider/sc-agent/internal/services/components/release_watcher"
 	"github.com/soerenschneider/sc-agent/internal/services/components/system"
 	"github.com/soerenschneider/sc-agent/internal/services/components/systemd"
@@ -56,7 +56,7 @@ func BuildDeps(conf config.Config) (*ports.Components, error) {
 		errs = multierr.Append(errs, err)
 	}
 
-	ret.ConditionalReboot, err = buildConditionalReboot(conf)
+	ret.RebootManager, err = buildRebootManager(conf)
 	if err != nil {
 		errs = multierr.Append(errs, err)
 	}
@@ -148,32 +148,32 @@ func buildHttpReplication(conf config.HttpReplication) (*http_replication2.Servi
 	return http_replication2.New(httpClient, items)
 }
 
-func buildConditionalReboot(config config.Config) (ports.ConditionalReboot, error) {
-	if config.ConditionalReboot == nil || !config.ConditionalReboot.Enabled {
+func buildRebootManager(config config.Config) (ports.RebootManager, error) {
+	if config.RebootManager == nil || !config.RebootManager.Enabled {
 		return nil, nil
 	}
 
 	groupUpdates := make(chan *group.Group, 1)
 
-	groups, err := deps.BuildGroups(groupUpdates, config.ConditionalReboot)
+	groups, err := deps.BuildGroups(groupUpdates, config.RebootManager)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not build groups")
 	}
 
 	rebootImpl := &reboot.DefaultRebootImpl{}
 
-	var opts []app.ConditionalRebootOpts
-	if config.ConditionalReboot.DryRun {
+	var opts []app.RebootManagerOpts
+	if config.RebootManager.DryRun {
 		opts = append(opts, app.DryRun())
 	}
-	app, err := app.NewConditionalReboot(groups, rebootImpl, groupUpdates, opts...)
+	app, err := app.NewRebootManager(groups, rebootImpl, groupUpdates, opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	go func() {
 		if err := app.Start(); err != nil {
-			log.Fatal().Err(err).Msgf("could not start conditional-reboot")
+			log.Fatal().Err(err).Msgf("could not start reboot-manager")
 		}
 	}()
 
