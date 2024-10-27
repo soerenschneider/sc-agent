@@ -3,8 +3,6 @@ package app
 import (
 	"context"
 	"errors"
-	"os"
-	"os/signal"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -77,26 +75,19 @@ func (app *RebootManager) IsSafeSystemBootUptimeReached() bool {
 	return systemUptime >= app.safeMinSystemUptime
 }
 
-func (app *RebootManager) Start() error {
-	ctx, cancel := context.WithCancel(context.Background())
+func (app *RebootManager) Start(ctx context.Context) error {
 	for _, group := range app.groups {
 		group.Start(ctx)
 	}
 
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
-
 	for {
 		select {
-		case <-sig:
-			cancel()
-			log.Info().Str("component", "reboot-manager").Msgf("Received signal, cancelling..")
+		case <-ctx.Done():
+			log.Info().Str("component", "reboot-manager").Msgf("Stopping")
 			return nil
 
 		case group := <-app.rebootRequest:
 			log.Info().Str("component", "reboot-manager").Msgf("Reboot request from group '%s'", group.GetName())
-			cancel()
-			// TODO: Get rid of lazy way, use waitgroups?!
 			time.Sleep(5 * time.Second)
 			err := app.tryReboot(group)
 			if err != nil {

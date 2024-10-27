@@ -171,12 +171,6 @@ func buildRebootManager(config config.Config) (ports.RebootManager, error) {
 		return nil, err
 	}
 
-	go func() {
-		if err := app.Start(); err != nil {
-			log.Fatal().Err(err).Msgf("could not start reboot-manager")
-		}
-	}()
-
 	return app, nil
 }
 

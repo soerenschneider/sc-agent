@@ -51,7 +51,7 @@ func (s *Components) StartServices(ctx context.Context, conf config.Config, scAg
 
 	if s.RebootManager != nil {
 		go func() {
-			_ = s.RebootManager.Start()
+			_ = s.RebootManager.Start(ctx)
 		}()
 	}
 
