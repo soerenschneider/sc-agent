@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.7.0](https://github.com/soerenschneider/sc-agent/compare/v1.6.0...v1.7.0) (2024-10-27)
+
+
+### Features
+
+* ability to define fall-back healthiness on continuous errors ([0a0dc4b](https://github.com/soerenschneider/sc-agent/commit/0a0dc4bd32c41839ae79ec4b6faef6f3d8cc2d7e))
+* add 'component' logging key ([82ee667](https://github.com/soerenschneider/sc-agent/commit/82ee6677c88d62e820ad8c6c20d6efa245cd0a40))
+* add 'dry-run' option for conditional-reboot ([85940ec](https://github.com/soerenschneider/sc-agent/commit/85940eccef29ab3d52e08b1add3eb61d506d24e3))
+
+
+### Bug Fixes
+
+* context not being passed to reboot-manager ([85a6fd9](https://github.com/soerenschneider/sc-agent/commit/85a6fd942b8ace624baf81f8d2e0ce31d8552f8b))
+* **deps:** bump github.com/prometheus/client_golang ([d71cd73](https://github.com/soerenschneider/sc-agent/commit/d71cd73b9443b13b0931b25e87ea048ca874454d))
+
 ## [1.6.0](https://github.com/soerenschneider/sc-agent/compare/v1.5.2...v1.6.0) (2024-10-20)
 
 
