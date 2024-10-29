@@ -823,9 +823,6 @@ components:
   schemas:
     Problem:
       description: A generic HTTP problem
-      xml:
-        name: problem
-        namespace: urn:ietf:rfc:7807
       properties:
         type:
           type: "string"
@@ -1411,27 +1408,11 @@ components:
             title: Bad Request
             status: 400
             detail: The request is invalid or missing required parameters.
-        application/problem+xml:
-          schema:
-            $ref: '#/components/schemas/Problem'
-          example:
-            type: https://example.com/errors/bad-request
-            title: Bad Request
-            status: 400
-            detail: The request is invalid or missing required parameters.
 
     Forbidden:
       description: Forbidden
       content:
         application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-          example:
-            type: https://example.com/errors/forbidden
-            title: Forbidden
-            status: 403
-            detail: Access is forbidden for the provided credentials.
-        application/problem+xml:
           schema:
             $ref: '#/components/schemas/Problem'
           example:
@@ -1451,14 +1432,6 @@ components:
             title: Internal Server Error
             status: 500
             detail: An unexpected error occurred.
-        application/problem+xml:
-          schema:
-            $ref: '#/components/schemas/Problem'
-          example:
-            type: https://example.com/errors/internal-server-error
-            title: Internal Server Error
-            status: 500
-            detail: An unexpected error occurred.
 
     NotFound:
       description: Not Found
@@ -1471,14 +1444,7 @@ components:
             title: Not Found
             status: 404
             detail: The requested resource was not found.
-        application/problem+xml:
-          schema:
-            $ref: '#/components/schemas/Problem'
-          example:
-            type: https://example.com/errors/not-found
-            title: Not Found
-            status: 404
-            detail: The requested resource was not found.
+
 
     NotImplemented:
       description: Not Implemented
@@ -1491,27 +1457,12 @@ components:
             title: Not Implemented
             status: 501
             detail: This function is not enabled.
-        application/problem+xml:
-          schema:
-            $ref: '#/components/schemas/Problem'
-          example:
-            type: https://example.com/errors/not-implemented
-            title: Not Implemented
-            status: 501
-            detail: This function is not enabled.
+
 
     Unauthorized:
       description: Unauthorized
       content:
         application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-          example:
-            type: https://example.com/errors/unauthorized
-            title: Unauthorized
-            status: 401
-            detail: You do not have the necessary permissions.
-        application/problem+xml:
           schema:
             $ref: '#/components/schemas/Problem'
           example:
