@@ -21,10 +21,7 @@ func (s *HttpServer) ReplicationGetHttpItemsList(ctx context.Context, request Re
 	}
 
 	dto := convertHttpReplicationItems(items)
-
-	return ReplicationGetHttpItemsList200JSONResponse{
-		Data: dto.Data,
-	}, nil
+	return ReplicationGetHttpItemsList200JSONResponse(dto), nil
 }
 
 func (s *HttpServer) ReplicationGetHttpItem(ctx context.Context, request ReplicationGetHttpItemRequestObject) (ReplicationGetHttpItemResponseObject, error) {
@@ -41,17 +38,8 @@ func (s *HttpServer) ReplicationGetHttpItem(ctx context.Context, request Replica
 		return ReplicationGetHttpItem500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	// TODO: fix
 	dto := convertHttpReplicationItem(item)
-
-	return ReplicationGetHttpItem200JSONResponse{
-		DestUris:         dto.DestUris,
-		ExpectedChecksum: dto.ExpectedChecksum,
-		Id:               dto.Id,
-		PostHooks:        dto.PostHooks,
-		Source:           dto.Source,
-		Status:           dto.Status,
-	}, nil
+	return ReplicationGetHttpItem200JSONResponse(dto), nil
 }
 
 func convertHttpReplicationItems(items []http_replication.ReplicationItem) ReplicationHttpItemsList {

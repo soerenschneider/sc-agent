@@ -23,13 +23,7 @@ func (s *HttpServer) ReplicationGetSecretsItem(ctx context.Context, request Repl
 	}
 
 	dto := convertSecretReplicationItem(item)
-	return ReplicationGetSecretsItem200JSONResponse{
-		DestUri:    dto.DestUri,
-		Formatter:  dto.Formatter,
-		Id:         dto.Id,
-		SecretPath: dto.SecretPath,
-		Status:     dto.Status,
-	}, nil
+	return ReplicationGetSecretsItem200JSONResponse(dto), nil
 }
 
 func (s *HttpServer) ReplicationPostSecretsRequests(ctx context.Context, request ReplicationPostSecretsRequestsRequestObject) (ReplicationPostSecretsRequestsResponseObject, error) {

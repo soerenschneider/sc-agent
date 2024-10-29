@@ -71,11 +71,7 @@ func (s *HttpServer) CertsSshGetCertificate(_ context.Context, request CertsSshG
 	}
 
 	dto := convertSshManagedCertificate(cert)
-	return CertsSshGetCertificate200JSONResponse{
-		Certificate:       dto.Certificate,
-		CertificateConfig: dto.CertificateConfig,
-		StorageConfig:     dto.StorageConfig,
-	}, nil
+	return CertsSshGetCertificate200JSONResponse(dto), nil
 }
 
 func convertSshCertificateConfig(conf ssh.CertificateConfig) SshCertificateConfig {

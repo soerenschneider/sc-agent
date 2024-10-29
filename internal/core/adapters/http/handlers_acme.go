@@ -39,15 +39,8 @@ func (s *HttpServer) CertsAcmeGetCertificate(_ context.Context, request CertsAcm
 		return CertsAcmeGetCertificate500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	var dto AcmeManagedCertificate //nolint:gosimple
-	dto = convertAcmeManagedCert(cert)
-
-	return CertsAcmeGetCertificate200JSONResponse{
-		Certificate:       dto.Certificate,
-		CertificateConfig: dto.CertificateConfig,
-		PostHooks:         dto.PostHooks,
-		StorageConfig:     dto.StorageConfig,
-	}, nil
+	dto := convertAcmeManagedCert(cert)
+	return CertsAcmeGetCertificate200JSONResponse(dto), nil
 }
 
 func convertAcmeManagedCertList(certs []x509.ManagedCertificateConfig) AcmeManagedCertificateList {

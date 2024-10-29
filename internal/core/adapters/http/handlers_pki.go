@@ -41,15 +41,8 @@ func (s *HttpServer) CertsX509GetCertificate(ctx context.Context, request CertsX
 		return CertsX509GetCertificate500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	var dto X509ManagedCertificate //nolint:gosimple
-	dto = convertX509ManagedCert(cert)
-
-	return CertsX509GetCertificate200JSONResponse{
-		CertificateConfig: dto.CertificateConfig,
-		CertificateData:   dto.CertificateData,
-		PostHooks:         dto.PostHooks,
-		StorageConfig:     dto.StorageConfig,
-	}, nil
+	dto := convertX509ManagedCert(cert)
+	return CertsX509GetCertificate200JSONResponse(dto), nil
 }
 
 func convertX509CertificateConfig(conf x509.CertificateConfig) X509CertificateConfig {

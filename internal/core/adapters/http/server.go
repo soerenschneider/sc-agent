@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -176,32 +175,4 @@ func (s *HttpServer) StartServer(ctx context.Context, wg *sync.WaitGroup) error 
 	case err := <-errChan:
 		return err
 	}
-}
-
-func writeRfc7807Error(writer http.ResponseWriter, code int, detail, instance string) {
-	defaultType := "about:blank"
-	resolvedTitle := http.StatusText(code)
-
-	problem := &Problem{
-		Status: &code,
-		Title:  &resolvedTitle,
-		Type:   &defaultType,
-	}
-
-	if detail != "" {
-		problem.Detail = &detail
-	}
-
-	if instance != "" {
-		problem.Instance = &instance
-	}
-
-	marshalled, err := json.Marshal(problem)
-	if err != nil {
-		log.Error().Err(err).Msg("could not marshal response")
-	}
-
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(code)
-	_, _ = writer.Write(marshalled)
 }
