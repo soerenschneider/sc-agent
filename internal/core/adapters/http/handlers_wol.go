@@ -1,18 +1,33 @@
 package http_server
 
 import (
-	"net/http"
+	"context"
 )
 
-func (s *HttpServer) WolPostMessage(w http.ResponseWriter, r *http.Request, alias string) {
+func (s *HttpServer) WolPostMessage(_ context.Context, request WolPostMessageRequestObject) (WolPostMessageResponseObject, error) {
 	if s.services.Wol == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return WolPostMessage501ApplicationProblemPlusJSONResponse{
+			NotImplementedApplicationProblemPlusJSONResponse{
+				Detail:   nil,
+				Instance: nil,
+				Status:   nil,
+				Title:    nil,
+				Type:     nil,
+			},
+		}, nil
 	}
 
-	if err := s.services.Wol.WakeUp(alias); err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "error sending wake-on-lan packet", "")
-		return
+	if err := s.services.Wol.WakeUp(request.Alias); err != nil {
+		return WolPostMessage500ApplicationProblemPlusJSONResponse{
+			InternalServerErrorApplicationProblemPlusJSONResponse{
+				Detail:   nil,
+				Instance: nil,
+				Status:   nil,
+				Title:    nil,
+				Type:     nil,
+			},
+		}, err
 	}
-	w.WriteHeader(http.StatusOK)
+
+	return WolPostMessage200Response{}, nil
 }

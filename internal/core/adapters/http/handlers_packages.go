@@ -1,31 +1,24 @@
 package http_server
 
 import (
-	"encoding/json"
-	"net/http"
+	"context"
 
 	"github.com/soerenschneider/sc-agent/internal/domain"
 )
 
-func (s *HttpServer) PackagesInstalledGet(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) PackagesInstalledGet(_ context.Context, _ PackagesInstalledGetRequestObject) (PackagesInstalledGetResponseObject, error) {
 	if s.services.Packages == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return PackagesInstalledGet501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	resp, err := s.services.Packages.ListInstalled()
 	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "dnf list installed packages failed", "")
-		return
+		return PackagesInstalledGet500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	var dto *PackagesInstalled //nolint:gosimple
-	dto = &PackagesInstalled{
+	return PackagesInstalledGet200JSONResponse{
 		Packages: convertPackages(resp),
-	}
-
-	marshalled, _ := json.Marshal(dto)
-	_, _ = w.Write(marshalled)
+	}, nil
 }
 
 func convertPackages(packages []domain.PackageInfo) []PackageInfo {
@@ -40,37 +33,31 @@ func convertPackages(packages []domain.PackageInfo) []PackageInfo {
 	return ret
 }
 
-func (s *HttpServer) PackagesUpdatesGet(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) PackagesUpdatesGet(_ context.Context, _ PackagesUpdatesGetRequestObject) (PackagesUpdatesGetResponseObject, error) {
 	if s.services.Packages == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return PackagesUpdatesGet501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	resp, err := s.services.Packages.CheckUpdate()
 	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "dnf check-update failed", "")
-		return
+		return PackagesUpdatesGet500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	var dto PackageUpdates //nolint:gosimple
-	dto = PackageUpdates{
+	return PackagesUpdatesGet200JSONResponse{
 		UpdatablePackages: convertPackages(resp.UpdatablePackages),
 		UpdatesAvailable:  resp.UpdatesAvailable,
-	}
-
-	marshalled, _ := json.Marshal(dto)
-	_, _ = w.Write(marshalled)
+	}, nil
 }
 
-func (s *HttpServer) PackagesUpgradeRequestsPost(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) PackagesUpgradeRequestsPost(_ context.Context, _ PackagesUpgradeRequestsPostRequestObject) (PackagesUpgradeRequestsPostResponseObject, error) {
 	if s.services.Packages == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return PackagesUpgradeRequestsPost501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	err := s.services.Packages.Upgrade()
 	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "dnf upgrade failed", "")
-		return
+		return PackagesUpgradeRequestsPost500ApplicationProblemPlusJSONResponse{}, nil
 	}
+
+	return PackagesUpgradeRequestsPost200Response{}, nil
 }

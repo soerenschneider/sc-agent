@@ -1,71 +1,51 @@
 package http_server
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
-	"net/http"
 
-	"github.com/rs/zerolog/log"
 	"github.com/soerenschneider/sc-agent/internal/core/ports"
 	"github.com/soerenschneider/sc-agent/internal/domain"
 )
 
-func (s *HttpServer) ServicesUnitLogsGet(w http.ResponseWriter, r *http.Request, unit string) {
+func (s *HttpServer) ServicesUnitLogsGet(ctx context.Context, request ServicesUnitLogsGetRequestObject) (ServicesUnitLogsGetResponseObject, error) {
 	if s.services.Services == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return ServicesUnitLogsGet501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	logsRequest := ports.SystemdLogsRequest{Unit: unit}
+	logsRequest := ports.SystemdLogsRequest{Unit: request.Unit}
 	logs, err := s.services.Services.Logs(logsRequest)
 	if err != nil {
 		if errors.Is(err, domain.ErrServicesNoSuchUnit) {
-			writeRfc7807Error(w, http.StatusNotFound, "no such unit", "")
+			return ServicesUnitLogsGet404ApplicationProblemPlusJSONResponse{}, nil
 		}
-		return
+		return ServicesUnitLogsGet500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	var dto ServiceLogsData //nolint:gosimple
-	dto = ServiceLogsData{
-		Data: &ServiceLogs{
-			Logs: logs,
-		},
-	}
-
-	jsonData, err := json.Marshal(dto)
-	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "", "")
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(jsonData)
-	if err != nil {
-		log.Error().Err(err).Str("endpoint", "handleSystemdLogs").Msg("error delivering response")
-	}
+	return ServicesUnitLogsGet200JSONResponse{
+		Data: &ServiceLogs{logs},
+	}, nil
 }
 
-func (s *HttpServer) ServicesUnitStatusPut(w http.ResponseWriter, r *http.Request, unit string, params ServicesUnitStatusPutParams) {
+func (s *HttpServer) ServicesUnitStatusPut(ctx context.Context, request ServicesUnitStatusPutRequestObject) (ServicesUnitStatusPutResponseObject, error) {
 	if s.services.Services == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return ServicesUnitStatusPut501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	var err error
-	if params.Action == Restart {
-		err = s.services.Services.Restart(unit)
-	} else if params.Action == Start {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
-	} else if params.Action == Stop {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+	if request.Params.Action == Restart {
+		err = s.services.Services.Restart(request.Unit)
+	} else if request.Params.Action == Start {
+		// TODO: implement
+		return ServicesUnitStatusPut501ApplicationProblemPlusJSONResponse{}, nil
+	} else if request.Params.Action == Stop {
+		// TODO: implement
+		return ServicesUnitStatusPut501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "", "")
-		return
+		return ServicesUnitStatusPut500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	w.WriteHeader(http.StatusOK)
+	return ServicesUnitStatusPut200Response{}, nil
 }

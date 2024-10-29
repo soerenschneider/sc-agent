@@ -1,30 +1,21 @@
 package http_server
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
-	"fmt"
-	"net/http"
 
 	"github.com/soerenschneider/sc-agent/internal/domain"
 	"github.com/soerenschneider/sc-agent/internal/domain/x509"
 	"github.com/soerenschneider/sc-agent/internal/services/components/pki"
 )
 
-func (s *HttpServer) CertsX509PostIssueRequests(w http.ResponseWriter, r *http.Request, params CertsX509PostIssueRequestsParams) {
-	// TODO
-}
-
-func (s *HttpServer) CertsX509GetCertificatesList(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) CertsX509GetCertificatesList(_ context.Context, _ CertsX509GetCertificatesListRequestObject) (CertsX509GetCertificatesListResponseObject, error) {
 	if s.services.Pki == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return CertsX509GetCertificatesList501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	certs := s.services.Pki.GetManagedCertificatesConfigs()
-
-	var dto X509ManagedCertificateList //nolint:gosimple
-	dto = X509ManagedCertificateList{
+	dto := X509ManagedCertificateList{
 		Data: []X509ManagedCertificate{},
 	}
 
@@ -32,40 +23,33 @@ func (s *HttpServer) CertsX509GetCertificatesList(w http.ResponseWriter, r *http
 		dto.Data = append(dto.Data, convertX509ManagedCert(cert))
 	}
 
-	marshalled, err := json.Marshal(dto)
-	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "Internal Server Error", "")
-		return
-	}
-
-	_, _ = w.Write(marshalled)
+	return CertsX509GetCertificatesList200JSONResponse{
+		dto,
+	}, nil
 }
 
-func (s *HttpServer) CertsX509GetCertificate(w http.ResponseWriter, r *http.Request, id string) {
+func (s *HttpServer) CertsX509GetCertificate(ctx context.Context, request CertsX509GetCertificateRequestObject) (CertsX509GetCertificateResponseObject, error) {
 	if s.services.Pki == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return CertsX509GetCertificate501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	cert, err := s.services.Pki.GetManagedCertificateConfig(id)
+	cert, err := s.services.Pki.GetManagedCertificateConfig(request.Id)
 	if err != nil {
 		if errors.Is(err, pki.ErrCertConfigNotFound) {
-			writeRfc7807Error(w, http.StatusNotFound, fmt.Sprintf("%s not found", id), "")
-			return
+			return CertsX509GetCertificate404ApplicationProblemPlusJSONResponse{}, nil
 		}
-		writeRfc7807Error(w, http.StatusInternalServerError, "Internal Server Error", "")
-		return
+		return CertsX509GetCertificate500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	var dto X509ManagedCertificate //nolint:gosimple
 	dto = convertX509ManagedCert(cert)
-	marshalled, err := json.Marshal(dto)
-	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "Internal Server Error", "")
-		return
-	}
 
-	_, _ = w.Write(marshalled)
+	return CertsX509GetCertificate200JSONResponse{
+		CertificateConfig: dto.CertificateConfig,
+		CertificateData:   dto.CertificateData,
+		PostHooks:         dto.PostHooks,
+		StorageConfig:     dto.StorageConfig,
+	}, nil
 }
 
 func convertX509CertificateConfig(conf x509.CertificateConfig) X509CertificateConfig {
