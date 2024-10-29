@@ -36,7 +36,7 @@ func (s *HttpServer) CertsSshPostIssueRequests(ctx context.Context, request Cert
 	return CertsSshPostIssueRequests200Response{}, nil
 }
 
-func (s *HttpServer) CertsSshGetCertificates(ctx context.Context, request CertsSshGetCertificatesRequestObject) (CertsSshGetCertificatesResponseObject, error) {
+func (s *HttpServer) CertsSshGetCertificates(_ context.Context, _ CertsSshGetCertificatesRequestObject) (CertsSshGetCertificatesResponseObject, error) {
 	if s.services.SshCertificates == nil {
 		return CertsSshGetCertificates501ApplicationProblemPlusJSONResponse{}, nil
 	}

@@ -15,8 +15,7 @@ func (s *HttpServer) ReplicationGetHttpItemsList(ctx context.Context, request Re
 	items, err := s.services.HttpReplication.GetReplicationItems()
 	if err != nil {
 		if errors.Is(err, http_replication.ErrHttpReplicationItemNotFound) {
-			// TODO: change spec, add 404 as response
-			return ReplicationGetHttpItemsList500ApplicationProblemPlusJSONResponse{}, nil
+			return ReplicationGetHttpItemsList404ApplicationProblemPlusJSONResponse{}, nil
 		}
 		return ReplicationGetHttpItemsList500ApplicationProblemPlusJSONResponse{}, nil
 	}

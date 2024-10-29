@@ -16,8 +16,7 @@ func (s *HttpServer) ReplicationGetSecretsItem(ctx context.Context, request Repl
 	item, err := s.services.SecretsReplication.GetReplicationItem(request.Id)
 	if err != nil {
 		if errors.Is(err, secret_replication.ErrSecretsReplicationItemNotFound) {
-			// TODO: update spec, 404
-			return ReplicationGetSecretsItem400ApplicationProblemPlusJSONResponse{}, nil
+			return ReplicationGetSecretsItem404ApplicationProblemPlusJSONResponse{}, nil
 		}
 
 		return ReplicationGetSecretsItem500ApplicationProblemPlusJSONResponse{}, nil
@@ -41,8 +40,7 @@ func (s *HttpServer) ReplicationPostSecretsRequests(ctx context.Context, request
 	syncSecretRequest, err := s.services.SecretsReplication.GetReplicationItem(request.Params.SecretPath)
 	if err != nil {
 		if errors.Is(err, secret_replication.ErrSecretsReplicationItemNotFound) {
-			// TODO: update spec, 404
-			return ReplicationPostSecretsRequests400ApplicationProblemPlusJSONResponse{}, nil
+			return ReplicationPostSecretsRequests404ApplicationProblemPlusJSONResponse{}, nil
 		}
 
 		return ReplicationPostSecretsRequests500ApplicationProblemPlusJSONResponse{}, nil
@@ -54,8 +52,7 @@ func (s *HttpServer) ReplicationPostSecretsRequests(ctx context.Context, request
 	}
 
 	if updatedSecret {
-		// TODO: update spec, 201
-		return ReplicationPostSecretsRequests200Response{}, nil
+		return ReplicationPostSecretsRequests201Response{}, nil
 	}
 
 	return ReplicationPostSecretsRequests200Response{}, nil

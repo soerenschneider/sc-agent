@@ -16,8 +16,7 @@ func (s *HttpServer) CertsAcmeGetCertificates(_ context.Context, request CertsAc
 	cert, err := s.services.Acme.GetManagedCertificateConfigs()
 	if err != nil {
 		if errors.Is(err, acme.ErrCertConfigNotFound) {
-			// TODO: update spec
-			return CertsAcmeGetCertificates400ApplicationProblemPlusJSONResponse{}, nil
+			return CertsAcmeGetCertificates404ApplicationProblemPlusJSONResponse{}, nil
 		}
 		return CertsAcmeGetCertificates500ApplicationProblemPlusJSONResponse{}, nil
 	}
@@ -35,8 +34,7 @@ func (s *HttpServer) CertsAcmeGetCertificate(_ context.Context, request CertsAcm
 	cert, err := s.services.Acme.GetManagedCertificateConfig(request.Id)
 	if err != nil {
 		if errors.Is(err, acme.ErrCertConfigNotFound) {
-			// TODO: update spec
-			return CertsAcmeGetCertificate400ApplicationProblemPlusJSONResponse{}, nil
+			return CertsAcmeGetCertificate404ApplicationProblemPlusJSONResponse{}, nil
 		}
 		return CertsAcmeGetCertificate500ApplicationProblemPlusJSONResponse{}, nil
 	}
