@@ -1,26 +1,24 @@
 package http_server
 
 import (
-	"net/http"
+	"context"
 )
 
-func (s *HttpServer) K0sPostAction(w http.ResponseWriter, r *http.Request, params K0sPostActionParams) {
+func (s *HttpServer) K0sPostAction(_ context.Context, request K0sPostActionRequestObject) (K0sPostActionResponseObject, error) {
 	if s.services.K0s == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return K0sPostAction501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	var err error
-	if params.Action == K0sPostActionParamsActionStart {
+	if request.Params.Action == K0sPostActionParamsActionStart {
 		err = s.services.K0s.Start()
-	} else if params.Action == K0sPostActionParamsActionStop {
+	} else if request.Params.Action == K0sPostActionParamsActionStop {
 		err = s.services.K0s.Stop()
 	}
 
 	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "could not stop k0s", "")
-		return
+		return K0sPostAction500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	w.WriteHeader(http.StatusOK)
+	return K0sPostAction200Response{}, nil
 }

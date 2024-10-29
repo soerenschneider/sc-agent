@@ -1,71 +1,45 @@
 package http_server
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
-	"net/http"
 
 	"github.com/soerenschneider/sc-agent/internal/domain/http_replication"
 )
 
-func (s *HttpServer) ReplicationGetHttpItemsList(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) ReplicationGetHttpItemsList(ctx context.Context, request ReplicationGetHttpItemsListRequestObject) (ReplicationGetHttpItemsListResponseObject, error) {
 	if s.services.HttpReplication == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return ReplicationGetHttpItemsList501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	items, err := s.services.HttpReplication.GetReplicationItems()
 	if err != nil {
 		if errors.Is(err, http_replication.ErrHttpReplicationItemNotFound) {
-			writeRfc7807Error(w, http.StatusNotFound, "sync items not found", "")
-			return
+			return ReplicationGetHttpItemsList404ApplicationProblemPlusJSONResponse{}, nil
 		}
-
-		writeRfc7807Error(w, http.StatusInternalServerError, "could not retrieve sync item", "")
-		return
+		return ReplicationGetHttpItemsList500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	var dto ReplicationHttpItemsList //nolint:gosimple
-	dto = convertHttpReplicationItems(items)
-
-	marshalled, err := json.Marshal(dto)
-	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "", "")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(marshalled)
+	dto := convertHttpReplicationItems(items)
+	return ReplicationGetHttpItemsList200JSONResponse(dto), nil
 }
 
-func (s *HttpServer) ReplicationGetHttpItem(w http.ResponseWriter, r *http.Request, id string) {
+func (s *HttpServer) ReplicationGetHttpItem(ctx context.Context, request ReplicationGetHttpItemRequestObject) (ReplicationGetHttpItemResponseObject, error) {
 	if s.services.HttpReplication == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return ReplicationGetHttpItem501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	item, err := s.services.HttpReplication.GetReplicationItem(id)
+	item, err := s.services.HttpReplication.GetReplicationItem(request.Id)
 	if err != nil {
 		if errors.Is(err, http_replication.ErrHttpReplicationItemNotFound) {
-			writeRfc7807Error(w, http.StatusNotFound, "sync item not found", "")
-			return
+			return ReplicationGetHttpItem400ApplicationProblemPlusJSONResponse{}, nil
 		}
 
-		writeRfc7807Error(w, http.StatusInternalServerError, "could not retrieve sync item", "")
-		return
+		return ReplicationGetHttpItem500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	var dto ReplicationHttpItem //nolint:gosimple
-	dto = convertHttpReplicationItem(item)
-
-	marshalled, err := json.Marshal(dto)
-	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "", "")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(marshalled)
+	dto := convertHttpReplicationItem(item)
+	return ReplicationGetHttpItem200JSONResponse(dto), nil
 }
 
 func convertHttpReplicationItems(items []http_replication.ReplicationItem) ReplicationHttpItemsList {

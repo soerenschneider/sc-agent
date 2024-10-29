@@ -1,77 +1,46 @@
 package http_server
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
-	"net/http"
 
 	"github.com/soerenschneider/sc-agent/internal/domain/x509"
 	"github.com/soerenschneider/sc-agent/internal/services/components/acme"
 )
 
-func (s *HttpServer) AcmeGetManagedCerts(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) CertsAcmeGetCertificates(_ context.Context, request CertsAcmeGetCertificatesRequestObject) (CertsAcmeGetCertificatesResponseObject, error) {
 	if s.services.Acme == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return CertsAcmeGetCertificates501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	cert, err := s.services.Acme.GetManagedCertificateConfigs()
 	if err != nil {
 		if errors.Is(err, acme.ErrCertConfigNotFound) {
-			writeRfc7807Error(w, http.StatusNotFound, "not found", "")
-			return
+			return CertsAcmeGetCertificates404ApplicationProblemPlusJSONResponse{}, nil
 		}
-		writeRfc7807Error(w, http.StatusInternalServerError, "could not stop k0s", "")
-		return
+		return CertsAcmeGetCertificates500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	var dto AcmeManagedCertificateList //nolint:gosimple
-	dto = convertAcmeManagedCertList(cert)
-
-	marshalled, err := json.Marshal(dto)
-	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "", "")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(marshalled)
-
-	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "could not stop k0s", "")
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	return CertsAcmeGetCertificates200JSONResponse{
+		Data: convertAcmeManagedCertList(cert).Data,
+	}, nil
 }
 
-func (s *HttpServer) AcmeGetManagedCert(w http.ResponseWriter, r *http.Request, id string) {
+func (s *HttpServer) CertsAcmeGetCertificate(_ context.Context, request CertsAcmeGetCertificateRequestObject) (CertsAcmeGetCertificateResponseObject, error) {
 	if s.services.Acme == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return CertsAcmeGetCertificate501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	cert, err := s.services.Acme.GetManagedCertificateConfig(id)
+	cert, err := s.services.Acme.GetManagedCertificateConfig(request.Id)
 	if err != nil {
 		if errors.Is(err, acme.ErrCertConfigNotFound) {
-			writeRfc7807Error(w, http.StatusNotFound, "not found", "")
-			return
+			return CertsAcmeGetCertificate404ApplicationProblemPlusJSONResponse{}, nil
 		}
-		writeRfc7807Error(w, http.StatusInternalServerError, "could not stop k0s", "")
-		return
+		return CertsAcmeGetCertificate500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	var dto AcmeManagedCertificate //nolint:gosimple
-	dto = convertAcmeManagedCert(cert)
-
-	marshalled, err := json.Marshal(dto)
-	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "", "")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(marshalled)
+	dto := convertAcmeManagedCert(cert)
+	return CertsAcmeGetCertificate200JSONResponse(dto), nil
 }
 
 func convertAcmeManagedCertList(certs []x509.ManagedCertificateConfig) AcmeManagedCertificateList {

@@ -1,29 +1,12 @@
 package http_server
 
 import (
-	"encoding/json"
-	"net/http"
-
-	"github.com/rs/zerolog/log"
+	"context"
 )
 
-func (s *HttpServer) InfoGetComponents(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) InfoGetComponents(_ context.Context, request InfoGetComponentsRequestObject) (InfoGetComponentsResponseObject, error) {
 	enabledComponents := s.services.EnabledComponents()
-
-	var dto InfoComponents //nolint:gosimple
-	dto = InfoComponents{
+	return InfoGetComponents200JSONResponse{
 		EnabledComponents: enabledComponents,
-	}
-
-	jsonData, err := json.Marshal(dto)
-	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "", "")
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(jsonData)
-	if err != nil {
-		log.Error().Err(err).Str("endpoint", "handleSystemdLogs").Msg("error delivering response")
-	}
+	}, nil
 }

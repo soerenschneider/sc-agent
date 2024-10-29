@@ -1,63 +1,54 @@
 package http_server
 
 import (
+	"context"
 	"encoding/json"
-	"net/http"
-
-	"github.com/rs/zerolog/log"
 )
 
-func (s *HttpServer) PowerPostAction(w http.ResponseWriter, r *http.Request, params PowerPostActionParams) {
+func (s *HttpServer) PowerPostAction(ctx context.Context, request PowerPostActionRequestObject) (PowerPostActionResponseObject, error) {
 	if s.services.PowerStatus == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return PowerPostAction501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	var err error
-	if params.Action == Reboot {
+	if request.Params.Action == Reboot {
 		err = s.services.PowerStatus.Reboot()
-	} else if params.Action == Shutdown {
+	} else if request.Params.Action == Shutdown {
 		err = s.services.PowerStatus.Shutdown()
 	}
 
 	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "could not shutdown machine", "")
-		return
+		return PowerPostAction500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	w.WriteHeader(http.StatusOK)
+	return PowerPostAction200Response{}, nil
 }
 
-func (s *HttpServer) PowerRebootManagerGetStatus(w http.ResponseWriter, r *http.Request) {
-	if s.services.RebootManager == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+func (s *HttpServer) PowerRebootManagerGetStatus(ctx context.Context, request PowerRebootManagerGetStatusRequestObject) (PowerRebootManagerGetStatusResponseObject, error) {
+	if s.services.PowerStatus == nil {
+		return PowerRebootManagerGetStatus501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	data := s.services.RebootManager.Status()
-
-	jsonData, err := json.Marshal(data)
+	// TODO: fix openapi sepc
+	marshalled, err := json.Marshal(data)
 	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "could not shutdown machine", "")
-		return
+		return PowerRebootManagerGetStatus500ApplicationProblemPlusJSONResponse{}, nil
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(jsonData)
-	if err != nil {
-		log.Error().Err(err).Str("endpoint", "PowerRebootManagerGetStatus").Msg("error delivering response")
-	}
+	marshalledStr := string(marshalled)
+	return PowerRebootManagerGetStatus200JSONResponse{&marshalledStr}, nil
 }
 
-func (s *HttpServer) PowerRebootManagerPostStatus(w http.ResponseWriter, r *http.Request, params PowerRebootManagerPostStatusParams) {
-	if s.services.RebootManager == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+func (s *HttpServer) PowerRebootManagerPostStatus(ctx context.Context, request PowerRebootManagerPostStatusRequestObject) (PowerRebootManagerPostStatusResponseObject, error) {
+	if s.services.PowerStatus == nil {
+		return PowerRebootManagerPostStatus500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	if params.Action == Pause {
+	if request.Params.Action == Pause {
 		s.services.RebootManager.Pause()
-	} else if params.Action == Unpause {
+	} else if request.Params.Action == Unpause {
 		s.services.RebootManager.Unpause()
 	}
+
+	return PowerRebootManagerPostStatus200Response{}, nil
 }

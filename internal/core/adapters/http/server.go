@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -23,6 +22,8 @@ const (
 	apiServerComponent = "api-server"
 )
 
+var _ StrictServerInterface = (*HttpServer)(nil)
+
 type HttpServer struct {
 	address string
 
@@ -36,12 +37,7 @@ type HttpServer struct {
 	principalFilter *TlsClientPrincipalFilter
 }
 
-func (s *HttpServer) CertsAcmeGetCertificates(w http.ResponseWriter, r *http.Request) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *HttpServer) CertsAcmeGetCertificate(w http.ResponseWriter, r *http.Request, id string) {
+func (s *HttpServer) CertsX509PostIssueRequests(ctx context.Context, request CertsX509PostIssueRequestsRequestObject) (CertsX509PostIssueRequestsResponseObject, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -105,7 +101,8 @@ func (s *HttpServer) getOpenApiHandler() (http.Handler, error) {
 		options.Middlewares = append(options.Middlewares, s.principalFilter.tlsClientCertMiddleware)
 	}
 
-	return HandlerWithOptions(s, options), nil
+	fickdich := NewStrictHandler(s, nil)
+	return HandlerWithOptions(fickdich, options), nil
 }
 
 func (s *HttpServer) StartServer(ctx context.Context, wg *sync.WaitGroup) error {
@@ -178,32 +175,4 @@ func (s *HttpServer) StartServer(ctx context.Context, wg *sync.WaitGroup) error 
 	case err := <-errChan:
 		return err
 	}
-}
-
-func writeRfc7807Error(writer http.ResponseWriter, code int, detail, instance string) {
-	defaultType := "about:blank"
-	resolvedTitle := http.StatusText(code)
-
-	problem := &Problem{
-		Status: &code,
-		Title:  &resolvedTitle,
-		Type:   &defaultType,
-	}
-
-	if detail != "" {
-		problem.Detail = &detail
-	}
-
-	if instance != "" {
-		problem.Instance = &instance
-	}
-
-	marshalled, err := json.Marshal(problem)
-	if err != nil {
-		log.Error().Err(err).Msg("could not marshal response")
-	}
-
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(code)
-	_, _ = writer.Write(marshalled)
 }

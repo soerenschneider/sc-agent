@@ -8,7 +8,9 @@ package http_server
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -18,6 +20,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/oapi-codegen/runtime"
+	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 )
 
 // Defines values for ReplicationHttpItemStatus.
@@ -1339,109 +1342,2594 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	return m
 }
 
+type BadRequestApplicationProblemPlusJSONResponse Problem
+
+type ForbiddenApplicationProblemPlusJSONResponse Problem
+
+type InternalServerErrorApplicationProblemPlusJSONResponse Problem
+
+type NotFoundApplicationProblemPlusJSONResponse Problem
+
+type NotImplementedApplicationProblemPlusJSONResponse Problem
+
+type UnauthorizedApplicationProblemPlusJSONResponse Problem
+
+type CertsAcmeGetCertificatesRequestObject struct {
+}
+
+type CertsAcmeGetCertificatesResponseObject interface {
+	VisitCertsAcmeGetCertificatesResponse(w http.ResponseWriter) error
+}
+
+type CertsAcmeGetCertificates200JSONResponse AcmeManagedCertificateList
+
+func (response CertsAcmeGetCertificates200JSONResponse) VisitCertsAcmeGetCertificatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsAcmeGetCertificates400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response CertsAcmeGetCertificates400ApplicationProblemPlusJSONResponse) VisitCertsAcmeGetCertificatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsAcmeGetCertificates403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response CertsAcmeGetCertificates403ApplicationProblemPlusJSONResponse) VisitCertsAcmeGetCertificatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsAcmeGetCertificates404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response CertsAcmeGetCertificates404ApplicationProblemPlusJSONResponse) VisitCertsAcmeGetCertificatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsAcmeGetCertificates500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response CertsAcmeGetCertificates500ApplicationProblemPlusJSONResponse) VisitCertsAcmeGetCertificatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsAcmeGetCertificates501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response CertsAcmeGetCertificates501ApplicationProblemPlusJSONResponse) VisitCertsAcmeGetCertificatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsAcmeGetCertificateRequestObject struct {
+	Id string `json:"id"`
+}
+
+type CertsAcmeGetCertificateResponseObject interface {
+	VisitCertsAcmeGetCertificateResponse(w http.ResponseWriter) error
+}
+
+type CertsAcmeGetCertificate200JSONResponse AcmeManagedCertificate
+
+func (response CertsAcmeGetCertificate200JSONResponse) VisitCertsAcmeGetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsAcmeGetCertificate400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response CertsAcmeGetCertificate400ApplicationProblemPlusJSONResponse) VisitCertsAcmeGetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsAcmeGetCertificate403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response CertsAcmeGetCertificate403ApplicationProblemPlusJSONResponse) VisitCertsAcmeGetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsAcmeGetCertificate404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response CertsAcmeGetCertificate404ApplicationProblemPlusJSONResponse) VisitCertsAcmeGetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsAcmeGetCertificate500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response CertsAcmeGetCertificate500ApplicationProblemPlusJSONResponse) VisitCertsAcmeGetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsAcmeGetCertificate501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response CertsAcmeGetCertificate501ApplicationProblemPlusJSONResponse) VisitCertsAcmeGetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshGetCertificatesRequestObject struct {
+	Params CertsSshGetCertificatesParams
+}
+
+type CertsSshGetCertificatesResponseObject interface {
+	VisitCertsSshGetCertificatesResponse(w http.ResponseWriter) error
+}
+
+type CertsSshGetCertificates200JSONResponse []SshManagedCertificatesList
+
+func (response CertsSshGetCertificates200JSONResponse) VisitCertsSshGetCertificatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshGetCertificates400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshGetCertificates400ApplicationProblemPlusJSONResponse) VisitCertsSshGetCertificatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshGetCertificates403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshGetCertificates403ApplicationProblemPlusJSONResponse) VisitCertsSshGetCertificatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshGetCertificates404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshGetCertificates404ApplicationProblemPlusJSONResponse) VisitCertsSshGetCertificatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshGetCertificates500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshGetCertificates500ApplicationProblemPlusJSONResponse) VisitCertsSshGetCertificatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshGetCertificates501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshGetCertificates501ApplicationProblemPlusJSONResponse) VisitCertsSshGetCertificatesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshPostIssueRequestsRequestObject struct {
+	Params CertsSshPostIssueRequestsParams
+}
+
+type CertsSshPostIssueRequestsResponseObject interface {
+	VisitCertsSshPostIssueRequestsResponse(w http.ResponseWriter) error
+}
+
+type CertsSshPostIssueRequests200Response struct {
+}
+
+func (response CertsSshPostIssueRequests200Response) VisitCertsSshPostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type CertsSshPostIssueRequests201Response struct {
+}
+
+func (response CertsSshPostIssueRequests201Response) VisitCertsSshPostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(201)
+	return nil
+}
+
+type CertsSshPostIssueRequests400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshPostIssueRequests400ApplicationProblemPlusJSONResponse) VisitCertsSshPostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshPostIssueRequests403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshPostIssueRequests403ApplicationProblemPlusJSONResponse) VisitCertsSshPostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshPostIssueRequests404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshPostIssueRequests404ApplicationProblemPlusJSONResponse) VisitCertsSshPostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshPostIssueRequests500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshPostIssueRequests500ApplicationProblemPlusJSONResponse) VisitCertsSshPostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshPostIssueRequests501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshPostIssueRequests501ApplicationProblemPlusJSONResponse) VisitCertsSshPostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshGetCertificateRequestObject struct {
+	Id string `json:"id"`
+}
+
+type CertsSshGetCertificateResponseObject interface {
+	VisitCertsSshGetCertificateResponse(w http.ResponseWriter) error
+}
+
+type CertsSshGetCertificate200JSONResponse SshManagedCertificate
+
+func (response CertsSshGetCertificate200JSONResponse) VisitCertsSshGetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshGetCertificate400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshGetCertificate400ApplicationProblemPlusJSONResponse) VisitCertsSshGetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshGetCertificate403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshGetCertificate403ApplicationProblemPlusJSONResponse) VisitCertsSshGetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshGetCertificate404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshGetCertificate404ApplicationProblemPlusJSONResponse) VisitCertsSshGetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshGetCertificate500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshGetCertificate500ApplicationProblemPlusJSONResponse) VisitCertsSshGetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsSshGetCertificate501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response CertsSshGetCertificate501ApplicationProblemPlusJSONResponse) VisitCertsSshGetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509GetCertificatesListRequestObject struct {
+}
+
+type CertsX509GetCertificatesListResponseObject interface {
+	VisitCertsX509GetCertificatesListResponse(w http.ResponseWriter) error
+}
+
+type CertsX509GetCertificatesList200JSONResponse []X509ManagedCertificateList
+
+func (response CertsX509GetCertificatesList200JSONResponse) VisitCertsX509GetCertificatesListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509GetCertificatesList400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509GetCertificatesList400ApplicationProblemPlusJSONResponse) VisitCertsX509GetCertificatesListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509GetCertificatesList403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509GetCertificatesList403ApplicationProblemPlusJSONResponse) VisitCertsX509GetCertificatesListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509GetCertificatesList404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509GetCertificatesList404ApplicationProblemPlusJSONResponse) VisitCertsX509GetCertificatesListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509GetCertificatesList500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509GetCertificatesList500ApplicationProblemPlusJSONResponse) VisitCertsX509GetCertificatesListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509GetCertificatesList501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509GetCertificatesList501ApplicationProblemPlusJSONResponse) VisitCertsX509GetCertificatesListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509PostIssueRequestsRequestObject struct {
+	Params CertsX509PostIssueRequestsParams
+}
+
+type CertsX509PostIssueRequestsResponseObject interface {
+	VisitCertsX509PostIssueRequestsResponse(w http.ResponseWriter) error
+}
+
+type CertsX509PostIssueRequests200Response struct {
+}
+
+func (response CertsX509PostIssueRequests200Response) VisitCertsX509PostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type CertsX509PostIssueRequests201Response struct {
+}
+
+func (response CertsX509PostIssueRequests201Response) VisitCertsX509PostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(201)
+	return nil
+}
+
+type CertsX509PostIssueRequests400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509PostIssueRequests400ApplicationProblemPlusJSONResponse) VisitCertsX509PostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509PostIssueRequests403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509PostIssueRequests403ApplicationProblemPlusJSONResponse) VisitCertsX509PostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509PostIssueRequests404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509PostIssueRequests404ApplicationProblemPlusJSONResponse) VisitCertsX509PostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509PostIssueRequests500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509PostIssueRequests500ApplicationProblemPlusJSONResponse) VisitCertsX509PostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509PostIssueRequests501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509PostIssueRequests501ApplicationProblemPlusJSONResponse) VisitCertsX509PostIssueRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509GetCertificateRequestObject struct {
+	Id string `json:"id"`
+}
+
+type CertsX509GetCertificateResponseObject interface {
+	VisitCertsX509GetCertificateResponse(w http.ResponseWriter) error
+}
+
+type CertsX509GetCertificate200JSONResponse X509ManagedCertificate
+
+func (response CertsX509GetCertificate200JSONResponse) VisitCertsX509GetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509GetCertificate400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509GetCertificate400ApplicationProblemPlusJSONResponse) VisitCertsX509GetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509GetCertificate403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509GetCertificate403ApplicationProblemPlusJSONResponse) VisitCertsX509GetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509GetCertificate404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509GetCertificate404ApplicationProblemPlusJSONResponse) VisitCertsX509GetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509GetCertificate500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509GetCertificate500ApplicationProblemPlusJSONResponse) VisitCertsX509GetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CertsX509GetCertificate501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response CertsX509GetCertificate501ApplicationProblemPlusJSONResponse) VisitCertsX509GetCertificateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type InfoGetComponentsRequestObject struct {
+}
+
+type InfoGetComponentsResponseObject interface {
+	VisitInfoGetComponentsResponse(w http.ResponseWriter) error
+}
+
+type InfoGetComponents200JSONResponse InfoComponents
+
+func (response InfoGetComponents200JSONResponse) VisitInfoGetComponentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type InfoGetComponents400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response InfoGetComponents400ApplicationProblemPlusJSONResponse) VisitInfoGetComponentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type InfoGetComponents403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response InfoGetComponents403ApplicationProblemPlusJSONResponse) VisitInfoGetComponentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type InfoGetComponents404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response InfoGetComponents404ApplicationProblemPlusJSONResponse) VisitInfoGetComponentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type InfoGetComponents500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response InfoGetComponents500ApplicationProblemPlusJSONResponse) VisitInfoGetComponentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type InfoGetComponents501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response InfoGetComponents501ApplicationProblemPlusJSONResponse) VisitInfoGetComponentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type K0sPostActionRequestObject struct {
+	Params K0sPostActionParams
+}
+
+type K0sPostActionResponseObject interface {
+	VisitK0sPostActionResponse(w http.ResponseWriter) error
+}
+
+type K0sPostAction200Response struct {
+}
+
+func (response K0sPostAction200Response) VisitK0sPostActionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type K0sPostAction400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response K0sPostAction400ApplicationProblemPlusJSONResponse) VisitK0sPostActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type K0sPostAction403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response K0sPostAction403ApplicationProblemPlusJSONResponse) VisitK0sPostActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type K0sPostAction500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response K0sPostAction500ApplicationProblemPlusJSONResponse) VisitK0sPostActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type K0sPostAction501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response K0sPostAction501ApplicationProblemPlusJSONResponse) VisitK0sPostActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LibvirtPostDomainActionRequestObject struct {
+	Domain string `json:"domain"`
+	Params LibvirtPostDomainActionParams
+}
+
+type LibvirtPostDomainActionResponseObject interface {
+	VisitLibvirtPostDomainActionResponse(w http.ResponseWriter) error
+}
+
+type LibvirtPostDomainAction200Response struct {
+}
+
+func (response LibvirtPostDomainAction200Response) VisitLibvirtPostDomainActionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type LibvirtPostDomainAction400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response LibvirtPostDomainAction400ApplicationProblemPlusJSONResponse) VisitLibvirtPostDomainActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LibvirtPostDomainAction403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response LibvirtPostDomainAction403ApplicationProblemPlusJSONResponse) VisitLibvirtPostDomainActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LibvirtPostDomainAction404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response LibvirtPostDomainAction404ApplicationProblemPlusJSONResponse) VisitLibvirtPostDomainActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LibvirtPostDomainAction500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response LibvirtPostDomainAction500ApplicationProblemPlusJSONResponse) VisitLibvirtPostDomainActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LibvirtPostDomainAction501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response LibvirtPostDomainAction501ApplicationProblemPlusJSONResponse) VisitLibvirtPostDomainActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesInstalledGetRequestObject struct {
+}
+
+type PackagesInstalledGetResponseObject interface {
+	VisitPackagesInstalledGetResponse(w http.ResponseWriter) error
+}
+
+type PackagesInstalledGet200JSONResponse PackagesInstalled
+
+func (response PackagesInstalledGet200JSONResponse) VisitPackagesInstalledGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesInstalledGet400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response PackagesInstalledGet400ApplicationProblemPlusJSONResponse) VisitPackagesInstalledGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesInstalledGet403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response PackagesInstalledGet403ApplicationProblemPlusJSONResponse) VisitPackagesInstalledGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesInstalledGet500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response PackagesInstalledGet500ApplicationProblemPlusJSONResponse) VisitPackagesInstalledGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesInstalledGet501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response PackagesInstalledGet501ApplicationProblemPlusJSONResponse) VisitPackagesInstalledGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesUpdatesGetRequestObject struct {
+}
+
+type PackagesUpdatesGetResponseObject interface {
+	VisitPackagesUpdatesGetResponse(w http.ResponseWriter) error
+}
+
+type PackagesUpdatesGet200JSONResponse PackageUpdates
+
+func (response PackagesUpdatesGet200JSONResponse) VisitPackagesUpdatesGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesUpdatesGet400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response PackagesUpdatesGet400ApplicationProblemPlusJSONResponse) VisitPackagesUpdatesGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesUpdatesGet403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response PackagesUpdatesGet403ApplicationProblemPlusJSONResponse) VisitPackagesUpdatesGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesUpdatesGet500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response PackagesUpdatesGet500ApplicationProblemPlusJSONResponse) VisitPackagesUpdatesGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesUpdatesGet501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response PackagesUpdatesGet501ApplicationProblemPlusJSONResponse) VisitPackagesUpdatesGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesUpgradeRequestsPostRequestObject struct {
+}
+
+type PackagesUpgradeRequestsPostResponseObject interface {
+	VisitPackagesUpgradeRequestsPostResponse(w http.ResponseWriter) error
+}
+
+type PackagesUpgradeRequestsPost200Response struct {
+}
+
+func (response PackagesUpgradeRequestsPost200Response) VisitPackagesUpgradeRequestsPostResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type PackagesUpgradeRequestsPost400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response PackagesUpgradeRequestsPost400ApplicationProblemPlusJSONResponse) VisitPackagesUpgradeRequestsPostResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesUpgradeRequestsPost403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response PackagesUpgradeRequestsPost403ApplicationProblemPlusJSONResponse) VisitPackagesUpgradeRequestsPostResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesUpgradeRequestsPost500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response PackagesUpgradeRequestsPost500ApplicationProblemPlusJSONResponse) VisitPackagesUpgradeRequestsPostResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PackagesUpgradeRequestsPost501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response PackagesUpgradeRequestsPost501ApplicationProblemPlusJSONResponse) VisitPackagesUpgradeRequestsPostResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerPostActionRequestObject struct {
+	Params PowerPostActionParams
+}
+
+type PowerPostActionResponseObject interface {
+	VisitPowerPostActionResponse(w http.ResponseWriter) error
+}
+
+type PowerPostAction200Response struct {
+}
+
+func (response PowerPostAction200Response) VisitPowerPostActionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type PowerPostAction400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response PowerPostAction400ApplicationProblemPlusJSONResponse) VisitPowerPostActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerPostAction403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response PowerPostAction403ApplicationProblemPlusJSONResponse) VisitPowerPostActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerPostAction500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response PowerPostAction500ApplicationProblemPlusJSONResponse) VisitPowerPostActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerPostAction501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response PowerPostAction501ApplicationProblemPlusJSONResponse) VisitPowerPostActionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerRebootManagerPostStatusRequestObject struct {
+	Params PowerRebootManagerPostStatusParams
+}
+
+type PowerRebootManagerPostStatusResponseObject interface {
+	VisitPowerRebootManagerPostStatusResponse(w http.ResponseWriter) error
+}
+
+type PowerRebootManagerPostStatus200Response struct {
+}
+
+func (response PowerRebootManagerPostStatus200Response) VisitPowerRebootManagerPostStatusResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type PowerRebootManagerPostStatus400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response PowerRebootManagerPostStatus400ApplicationProblemPlusJSONResponse) VisitPowerRebootManagerPostStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerRebootManagerPostStatus403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response PowerRebootManagerPostStatus403ApplicationProblemPlusJSONResponse) VisitPowerRebootManagerPostStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerRebootManagerPostStatus500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response PowerRebootManagerPostStatus500ApplicationProblemPlusJSONResponse) VisitPowerRebootManagerPostStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerRebootManagerPostStatus501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response PowerRebootManagerPostStatus501ApplicationProblemPlusJSONResponse) VisitPowerRebootManagerPostStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerRebootManagerGetStatusRequestObject struct {
+}
+
+type PowerRebootManagerGetStatusResponseObject interface {
+	VisitPowerRebootManagerGetStatusResponse(w http.ResponseWriter) error
+}
+
+type PowerRebootManagerGetStatus200JSONResponse struct {
+	Status *string `json:"status,omitempty"`
+}
+
+func (response PowerRebootManagerGetStatus200JSONResponse) VisitPowerRebootManagerGetStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerRebootManagerGetStatus400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response PowerRebootManagerGetStatus400ApplicationProblemPlusJSONResponse) VisitPowerRebootManagerGetStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerRebootManagerGetStatus403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response PowerRebootManagerGetStatus403ApplicationProblemPlusJSONResponse) VisitPowerRebootManagerGetStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerRebootManagerGetStatus500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response PowerRebootManagerGetStatus500ApplicationProblemPlusJSONResponse) VisitPowerRebootManagerGetStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PowerRebootManagerGetStatus501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response PowerRebootManagerGetStatus501ApplicationProblemPlusJSONResponse) VisitPowerRebootManagerGetStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetHttpItemsListRequestObject struct {
+}
+
+type ReplicationGetHttpItemsListResponseObject interface {
+	VisitReplicationGetHttpItemsListResponse(w http.ResponseWriter) error
+}
+
+type ReplicationGetHttpItemsList200JSONResponse ReplicationHttpItemsList
+
+func (response ReplicationGetHttpItemsList200JSONResponse) VisitReplicationGetHttpItemsListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetHttpItemsList400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetHttpItemsList400ApplicationProblemPlusJSONResponse) VisitReplicationGetHttpItemsListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetHttpItemsList403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetHttpItemsList403ApplicationProblemPlusJSONResponse) VisitReplicationGetHttpItemsListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetHttpItemsList404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetHttpItemsList404ApplicationProblemPlusJSONResponse) VisitReplicationGetHttpItemsListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetHttpItemsList500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetHttpItemsList500ApplicationProblemPlusJSONResponse) VisitReplicationGetHttpItemsListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetHttpItemsList501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetHttpItemsList501ApplicationProblemPlusJSONResponse) VisitReplicationGetHttpItemsListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetHttpItemRequestObject struct {
+	Id string `json:"id"`
+}
+
+type ReplicationGetHttpItemResponseObject interface {
+	VisitReplicationGetHttpItemResponse(w http.ResponseWriter) error
+}
+
+type ReplicationGetHttpItem200JSONResponse ReplicationHttpItem
+
+func (response ReplicationGetHttpItem200JSONResponse) VisitReplicationGetHttpItemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetHttpItem400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetHttpItem400ApplicationProblemPlusJSONResponse) VisitReplicationGetHttpItemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetHttpItem403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetHttpItem403ApplicationProblemPlusJSONResponse) VisitReplicationGetHttpItemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetHttpItem500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetHttpItem500ApplicationProblemPlusJSONResponse) VisitReplicationGetHttpItemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetHttpItem501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetHttpItem501ApplicationProblemPlusJSONResponse) VisitReplicationGetHttpItemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetSecretsItemsListRequestObject struct {
+}
+
+type ReplicationGetSecretsItemsListResponseObject interface {
+	VisitReplicationGetSecretsItemsListResponse(w http.ResponseWriter) error
+}
+
+type ReplicationGetSecretsItemsList200JSONResponse ReplicationSecretsItemsList
+
+func (response ReplicationGetSecretsItemsList200JSONResponse) VisitReplicationGetSecretsItemsListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetSecretsItemsList400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetSecretsItemsList400ApplicationProblemPlusJSONResponse) VisitReplicationGetSecretsItemsListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetSecretsItemsList403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetSecretsItemsList403ApplicationProblemPlusJSONResponse) VisitReplicationGetSecretsItemsListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetSecretsItemsList404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetSecretsItemsList404ApplicationProblemPlusJSONResponse) VisitReplicationGetSecretsItemsListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetSecretsItemsList500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetSecretsItemsList500ApplicationProblemPlusJSONResponse) VisitReplicationGetSecretsItemsListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetSecretsItemsList501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetSecretsItemsList501ApplicationProblemPlusJSONResponse) VisitReplicationGetSecretsItemsListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetSecretsItemRequestObject struct {
+	Id string `json:"id"`
+}
+
+type ReplicationGetSecretsItemResponseObject interface {
+	VisitReplicationGetSecretsItemResponse(w http.ResponseWriter) error
+}
+
+type ReplicationGetSecretsItem200JSONResponse ReplicationSecretsItem
+
+func (response ReplicationGetSecretsItem200JSONResponse) VisitReplicationGetSecretsItemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetSecretsItem400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetSecretsItem400ApplicationProblemPlusJSONResponse) VisitReplicationGetSecretsItemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetSecretsItem403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetSecretsItem403ApplicationProblemPlusJSONResponse) VisitReplicationGetSecretsItemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetSecretsItem404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetSecretsItem404ApplicationProblemPlusJSONResponse) VisitReplicationGetSecretsItemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetSecretsItem500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetSecretsItem500ApplicationProblemPlusJSONResponse) VisitReplicationGetSecretsItemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationGetSecretsItem501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationGetSecretsItem501ApplicationProblemPlusJSONResponse) VisitReplicationGetSecretsItemResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationPostSecretsRequestsRequestObject struct {
+	Params ReplicationPostSecretsRequestsParams
+}
+
+type ReplicationPostSecretsRequestsResponseObject interface {
+	VisitReplicationPostSecretsRequestsResponse(w http.ResponseWriter) error
+}
+
+type ReplicationPostSecretsRequests200Response struct {
+}
+
+func (response ReplicationPostSecretsRequests200Response) VisitReplicationPostSecretsRequestsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type ReplicationPostSecretsRequests201Response struct {
+}
+
+func (response ReplicationPostSecretsRequests201Response) VisitReplicationPostSecretsRequestsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(201)
+	return nil
+}
+
+type ReplicationPostSecretsRequests400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationPostSecretsRequests400ApplicationProblemPlusJSONResponse) VisitReplicationPostSecretsRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationPostSecretsRequests403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationPostSecretsRequests403ApplicationProblemPlusJSONResponse) VisitReplicationPostSecretsRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationPostSecretsRequests404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationPostSecretsRequests404ApplicationProblemPlusJSONResponse) VisitReplicationPostSecretsRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationPostSecretsRequests500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationPostSecretsRequests500ApplicationProblemPlusJSONResponse) VisitReplicationPostSecretsRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplicationPostSecretsRequests501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response ReplicationPostSecretsRequests501ApplicationProblemPlusJSONResponse) VisitReplicationPostSecretsRequestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ServicesUnitLogsGetRequestObject struct {
+	Unit string `json:"unit"`
+}
+
+type ServicesUnitLogsGetResponseObject interface {
+	VisitServicesUnitLogsGetResponse(w http.ResponseWriter) error
+}
+
+type ServicesUnitLogsGet200JSONResponse ServiceLogsData
+
+func (response ServicesUnitLogsGet200JSONResponse) VisitServicesUnitLogsGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ServicesUnitLogsGet400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ServicesUnitLogsGet400ApplicationProblemPlusJSONResponse) VisitServicesUnitLogsGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ServicesUnitLogsGet401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ServicesUnitLogsGet401ApplicationProblemPlusJSONResponse) VisitServicesUnitLogsGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ServicesUnitLogsGet403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response ServicesUnitLogsGet403ApplicationProblemPlusJSONResponse) VisitServicesUnitLogsGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ServicesUnitLogsGet404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ServicesUnitLogsGet404ApplicationProblemPlusJSONResponse) VisitServicesUnitLogsGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ServicesUnitLogsGet500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response ServicesUnitLogsGet500ApplicationProblemPlusJSONResponse) VisitServicesUnitLogsGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ServicesUnitLogsGet501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response ServicesUnitLogsGet501ApplicationProblemPlusJSONResponse) VisitServicesUnitLogsGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ServicesUnitStatusPutRequestObject struct {
+	Unit   string `json:"unit"`
+	Params ServicesUnitStatusPutParams
+}
+
+type ServicesUnitStatusPutResponseObject interface {
+	VisitServicesUnitStatusPutResponse(w http.ResponseWriter) error
+}
+
+type ServicesUnitStatusPut200Response struct {
+}
+
+func (response ServicesUnitStatusPut200Response) VisitServicesUnitStatusPutResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type ServicesUnitStatusPut400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ServicesUnitStatusPut400ApplicationProblemPlusJSONResponse) VisitServicesUnitStatusPutResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ServicesUnitStatusPut403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response ServicesUnitStatusPut403ApplicationProblemPlusJSONResponse) VisitServicesUnitStatusPutResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ServicesUnitStatusPut404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ServicesUnitStatusPut404ApplicationProblemPlusJSONResponse) VisitServicesUnitStatusPutResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ServicesUnitStatusPut500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response ServicesUnitStatusPut500ApplicationProblemPlusJSONResponse) VisitServicesUnitStatusPutResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ServicesUnitStatusPut501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response ServicesUnitStatusPut501ApplicationProblemPlusJSONResponse) VisitServicesUnitStatusPutResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type WolPostMessageRequestObject struct {
+	Alias string `json:"alias"`
+}
+
+type WolPostMessageResponseObject interface {
+	VisitWolPostMessageResponse(w http.ResponseWriter) error
+}
+
+type WolPostMessage200Response struct {
+}
+
+func (response WolPostMessage200Response) VisitWolPostMessageResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type WolPostMessage400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response WolPostMessage400ApplicationProblemPlusJSONResponse) VisitWolPostMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type WolPostMessage403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response WolPostMessage403ApplicationProblemPlusJSONResponse) VisitWolPostMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type WolPostMessage404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response WolPostMessage404ApplicationProblemPlusJSONResponse) VisitWolPostMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type WolPostMessage500ApplicationProblemPlusJSONResponse struct {
+	InternalServerErrorApplicationProblemPlusJSONResponse
+}
+
+func (response WolPostMessage500ApplicationProblemPlusJSONResponse) VisitWolPostMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type WolPostMessage501ApplicationProblemPlusJSONResponse struct {
+	NotImplementedApplicationProblemPlusJSONResponse
+}
+
+func (response WolPostMessage501ApplicationProblemPlusJSONResponse) VisitWolPostMessageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+// StrictServerInterface represents all server handlers.
+type StrictServerInterface interface {
+	// Returns current configuration
+	// (GET /v1/certs/acme)
+	CertsAcmeGetCertificates(ctx context.Context, request CertsAcmeGetCertificatesRequestObject) (CertsAcmeGetCertificatesResponseObject, error)
+	// Returns the replication status of a single item
+	// (GET /v1/certs/acme/{id})
+	CertsAcmeGetCertificate(ctx context.Context, request CertsAcmeGetCertificateRequestObject) (CertsAcmeGetCertificateResponseObject, error)
+	// Get the configuration of all managed ssh certificates
+	// (GET /v1/certs/ssh)
+	CertsSshGetCertificates(ctx context.Context, request CertsSshGetCertificatesRequestObject) (CertsSshGetCertificatesResponseObject, error)
+	// Sign a SSH public key
+	// (POST /v1/certs/ssh/issue-requests)
+	CertsSshPostIssueRequests(ctx context.Context, request CertsSshPostIssueRequestsRequestObject) (CertsSshPostIssueRequestsResponseObject, error)
+	// Get the configuration of a single managed ssh certificate
+	// (GET /v1/certs/ssh/{id})
+	CertsSshGetCertificate(ctx context.Context, request CertsSshGetCertificateRequestObject) (CertsSshGetCertificateResponseObject, error)
+	// Return configuration of all managed x509 certificates
+	// (GET /v1/certs/x509)
+	CertsX509GetCertificatesList(ctx context.Context, request CertsX509GetCertificatesListRequestObject) (CertsX509GetCertificatesListResponseObject, error)
+	// Issues a X509 certificate
+	// (POST /v1/certs/x509/issue-requests)
+	CertsX509PostIssueRequests(ctx context.Context, request CertsX509PostIssueRequestsRequestObject) (CertsX509PostIssueRequestsResponseObject, error)
+	// Returns info of configured managed x509 certificate
+	// (GET /v1/certs/x509/{id})
+	CertsX509GetCertificate(ctx context.Context, request CertsX509GetCertificateRequestObject) (CertsX509GetCertificateResponseObject, error)
+	// Returns all enabled components
+	// (GET /v1/info/components)
+	InfoGetComponents(ctx context.Context, request InfoGetComponentsRequestObject) (InfoGetComponentsResponseObject, error)
+	// Start k0s
+	// (POST /v1/k0s/actions)
+	K0sPostAction(ctx context.Context, request K0sPostActionRequestObject) (K0sPostActionResponseObject, error)
+	// Set status of libvirt domain
+	// (POST /v1/libvirt/domains/{domain})
+	LibvirtPostDomainAction(ctx context.Context, request LibvirtPostDomainActionRequestObject) (LibvirtPostDomainActionResponseObject, error)
+	// Lists installed packages
+	// (GET /v1/packages/installed)
+	PackagesInstalledGet(ctx context.Context, request PackagesInstalledGetRequestObject) (PackagesInstalledGetResponseObject, error)
+	// Checks for updates
+	// (GET /v1/packages/updates)
+	PackagesUpdatesGet(ctx context.Context, request PackagesUpdatesGetRequestObject) (PackagesUpdatesGetResponseObject, error)
+	// Upgrades all packages
+	// (POST /v1/packages/upgrade-requests)
+	PackagesUpgradeRequestsPost(ctx context.Context, request PackagesUpgradeRequestsPostRequestObject) (PackagesUpgradeRequestsPostResponseObject, error)
+	// Directly interact with the power status of the system
+	// (POST /v1/power-state)
+	PowerPostAction(ctx context.Context, request PowerPostActionRequestObject) (PowerPostActionResponseObject, error)
+	// Unpause reboot status
+	// (PUT /v1/power-state/reboot-manager)
+	PowerRebootManagerPostStatus(ctx context.Context, request PowerRebootManagerPostStatusRequestObject) (PowerRebootManagerPostStatusResponseObject, error)
+	// Get reboot status
+	// (GET /v1/power-state/reboot-manager/status)
+	PowerRebootManagerGetStatus(ctx context.Context, request PowerRebootManagerGetStatusRequestObject) (PowerRebootManagerGetStatusResponseObject, error)
+	// Returns current configuration
+	// (GET /v1/replication/http/items)
+	ReplicationGetHttpItemsList(ctx context.Context, request ReplicationGetHttpItemsListRequestObject) (ReplicationGetHttpItemsListResponseObject, error)
+	// Returns the replication status of a single item
+	// (GET /v1/replication/http/items/{id})
+	ReplicationGetHttpItem(ctx context.Context, request ReplicationGetHttpItemRequestObject) (ReplicationGetHttpItemResponseObject, error)
+	// Returns current configuration
+	// (GET /v1/replication/secrets/items)
+	ReplicationGetSecretsItemsList(ctx context.Context, request ReplicationGetSecretsItemsListRequestObject) (ReplicationGetSecretsItemsListResponseObject, error)
+	// Returns the replication status of a single item
+	// (GET /v1/replication/secrets/items/{id})
+	ReplicationGetSecretsItem(ctx context.Context, request ReplicationGetSecretsItemRequestObject) (ReplicationGetSecretsItemResponseObject, error)
+	// Replicate a secret from Vault
+	// (POST /v1/replication/secrets/sync-requests)
+	ReplicationPostSecretsRequests(ctx context.Context, request ReplicationPostSecretsRequestsRequestObject) (ReplicationPostSecretsRequestsResponseObject, error)
+	// Get logs of a system service unit
+	// (GET /v1/services/{unit}/logs)
+	ServicesUnitLogsGet(ctx context.Context, request ServicesUnitLogsGetRequestObject) (ServicesUnitLogsGetResponseObject, error)
+	// Interact with a system service
+	// (PUT /v1/services/{unit}/status)
+	ServicesUnitStatusPut(ctx context.Context, request ServicesUnitStatusPutRequestObject) (ServicesUnitStatusPutResponseObject, error)
+	// Send a WOL packet
+	// (POST /v1/wol-message/{alias})
+	WolPostMessage(ctx context.Context, request WolPostMessageRequestObject) (WolPostMessageResponseObject, error)
+}
+
+type StrictHandlerFunc = strictnethttp.StrictHTTPHandlerFunc
+type StrictMiddlewareFunc = strictnethttp.StrictHTTPMiddlewareFunc
+
+type StrictHTTPServerOptions struct {
+	RequestErrorHandlerFunc  func(w http.ResponseWriter, r *http.Request, err error)
+	ResponseErrorHandlerFunc func(w http.ResponseWriter, r *http.Request, err error)
+}
+
+func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareFunc) ServerInterface {
+	return &strictHandler{ssi: ssi, middlewares: middlewares, options: StrictHTTPServerOptions{
+		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		},
+		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		},
+	}}
+}
+
+func NewStrictHandlerWithOptions(ssi StrictServerInterface, middlewares []StrictMiddlewareFunc, options StrictHTTPServerOptions) ServerInterface {
+	return &strictHandler{ssi: ssi, middlewares: middlewares, options: options}
+}
+
+type strictHandler struct {
+	ssi         StrictServerInterface
+	middlewares []StrictMiddlewareFunc
+	options     StrictHTTPServerOptions
+}
+
+// CertsAcmeGetCertificates operation middleware
+func (sh *strictHandler) CertsAcmeGetCertificates(w http.ResponseWriter, r *http.Request) {
+	var request CertsAcmeGetCertificatesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CertsAcmeGetCertificates(ctx, request.(CertsAcmeGetCertificatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CertsAcmeGetCertificates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CertsAcmeGetCertificatesResponseObject); ok {
+		if err := validResponse.VisitCertsAcmeGetCertificatesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CertsAcmeGetCertificate operation middleware
+func (sh *strictHandler) CertsAcmeGetCertificate(w http.ResponseWriter, r *http.Request, id string) {
+	var request CertsAcmeGetCertificateRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CertsAcmeGetCertificate(ctx, request.(CertsAcmeGetCertificateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CertsAcmeGetCertificate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CertsAcmeGetCertificateResponseObject); ok {
+		if err := validResponse.VisitCertsAcmeGetCertificateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CertsSshGetCertificates operation middleware
+func (sh *strictHandler) CertsSshGetCertificates(w http.ResponseWriter, r *http.Request, params CertsSshGetCertificatesParams) {
+	var request CertsSshGetCertificatesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CertsSshGetCertificates(ctx, request.(CertsSshGetCertificatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CertsSshGetCertificates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CertsSshGetCertificatesResponseObject); ok {
+		if err := validResponse.VisitCertsSshGetCertificatesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CertsSshPostIssueRequests operation middleware
+func (sh *strictHandler) CertsSshPostIssueRequests(w http.ResponseWriter, r *http.Request, params CertsSshPostIssueRequestsParams) {
+	var request CertsSshPostIssueRequestsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CertsSshPostIssueRequests(ctx, request.(CertsSshPostIssueRequestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CertsSshPostIssueRequests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CertsSshPostIssueRequestsResponseObject); ok {
+		if err := validResponse.VisitCertsSshPostIssueRequestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CertsSshGetCertificate operation middleware
+func (sh *strictHandler) CertsSshGetCertificate(w http.ResponseWriter, r *http.Request, id string) {
+	var request CertsSshGetCertificateRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CertsSshGetCertificate(ctx, request.(CertsSshGetCertificateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CertsSshGetCertificate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CertsSshGetCertificateResponseObject); ok {
+		if err := validResponse.VisitCertsSshGetCertificateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CertsX509GetCertificatesList operation middleware
+func (sh *strictHandler) CertsX509GetCertificatesList(w http.ResponseWriter, r *http.Request) {
+	var request CertsX509GetCertificatesListRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CertsX509GetCertificatesList(ctx, request.(CertsX509GetCertificatesListRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CertsX509GetCertificatesList")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CertsX509GetCertificatesListResponseObject); ok {
+		if err := validResponse.VisitCertsX509GetCertificatesListResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CertsX509PostIssueRequests operation middleware
+func (sh *strictHandler) CertsX509PostIssueRequests(w http.ResponseWriter, r *http.Request, params CertsX509PostIssueRequestsParams) {
+	var request CertsX509PostIssueRequestsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CertsX509PostIssueRequests(ctx, request.(CertsX509PostIssueRequestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CertsX509PostIssueRequests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CertsX509PostIssueRequestsResponseObject); ok {
+		if err := validResponse.VisitCertsX509PostIssueRequestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CertsX509GetCertificate operation middleware
+func (sh *strictHandler) CertsX509GetCertificate(w http.ResponseWriter, r *http.Request, id string) {
+	var request CertsX509GetCertificateRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CertsX509GetCertificate(ctx, request.(CertsX509GetCertificateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CertsX509GetCertificate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CertsX509GetCertificateResponseObject); ok {
+		if err := validResponse.VisitCertsX509GetCertificateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// InfoGetComponents operation middleware
+func (sh *strictHandler) InfoGetComponents(w http.ResponseWriter, r *http.Request) {
+	var request InfoGetComponentsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.InfoGetComponents(ctx, request.(InfoGetComponentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "InfoGetComponents")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(InfoGetComponentsResponseObject); ok {
+		if err := validResponse.VisitInfoGetComponentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// K0sPostAction operation middleware
+func (sh *strictHandler) K0sPostAction(w http.ResponseWriter, r *http.Request, params K0sPostActionParams) {
+	var request K0sPostActionRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.K0sPostAction(ctx, request.(K0sPostActionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "K0sPostAction")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(K0sPostActionResponseObject); ok {
+		if err := validResponse.VisitK0sPostActionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LibvirtPostDomainAction operation middleware
+func (sh *strictHandler) LibvirtPostDomainAction(w http.ResponseWriter, r *http.Request, domain string, params LibvirtPostDomainActionParams) {
+	var request LibvirtPostDomainActionRequestObject
+
+	request.Domain = domain
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.LibvirtPostDomainAction(ctx, request.(LibvirtPostDomainActionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LibvirtPostDomainAction")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LibvirtPostDomainActionResponseObject); ok {
+		if err := validResponse.VisitLibvirtPostDomainActionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PackagesInstalledGet operation middleware
+func (sh *strictHandler) PackagesInstalledGet(w http.ResponseWriter, r *http.Request) {
+	var request PackagesInstalledGetRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PackagesInstalledGet(ctx, request.(PackagesInstalledGetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PackagesInstalledGet")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PackagesInstalledGetResponseObject); ok {
+		if err := validResponse.VisitPackagesInstalledGetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PackagesUpdatesGet operation middleware
+func (sh *strictHandler) PackagesUpdatesGet(w http.ResponseWriter, r *http.Request) {
+	var request PackagesUpdatesGetRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PackagesUpdatesGet(ctx, request.(PackagesUpdatesGetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PackagesUpdatesGet")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PackagesUpdatesGetResponseObject); ok {
+		if err := validResponse.VisitPackagesUpdatesGetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PackagesUpgradeRequestsPost operation middleware
+func (sh *strictHandler) PackagesUpgradeRequestsPost(w http.ResponseWriter, r *http.Request) {
+	var request PackagesUpgradeRequestsPostRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PackagesUpgradeRequestsPost(ctx, request.(PackagesUpgradeRequestsPostRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PackagesUpgradeRequestsPost")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PackagesUpgradeRequestsPostResponseObject); ok {
+		if err := validResponse.VisitPackagesUpgradeRequestsPostResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PowerPostAction operation middleware
+func (sh *strictHandler) PowerPostAction(w http.ResponseWriter, r *http.Request, params PowerPostActionParams) {
+	var request PowerPostActionRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PowerPostAction(ctx, request.(PowerPostActionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PowerPostAction")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PowerPostActionResponseObject); ok {
+		if err := validResponse.VisitPowerPostActionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PowerRebootManagerPostStatus operation middleware
+func (sh *strictHandler) PowerRebootManagerPostStatus(w http.ResponseWriter, r *http.Request, params PowerRebootManagerPostStatusParams) {
+	var request PowerRebootManagerPostStatusRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PowerRebootManagerPostStatus(ctx, request.(PowerRebootManagerPostStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PowerRebootManagerPostStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PowerRebootManagerPostStatusResponseObject); ok {
+		if err := validResponse.VisitPowerRebootManagerPostStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PowerRebootManagerGetStatus operation middleware
+func (sh *strictHandler) PowerRebootManagerGetStatus(w http.ResponseWriter, r *http.Request) {
+	var request PowerRebootManagerGetStatusRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PowerRebootManagerGetStatus(ctx, request.(PowerRebootManagerGetStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PowerRebootManagerGetStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PowerRebootManagerGetStatusResponseObject); ok {
+		if err := validResponse.VisitPowerRebootManagerGetStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplicationGetHttpItemsList operation middleware
+func (sh *strictHandler) ReplicationGetHttpItemsList(w http.ResponseWriter, r *http.Request) {
+	var request ReplicationGetHttpItemsListRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplicationGetHttpItemsList(ctx, request.(ReplicationGetHttpItemsListRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplicationGetHttpItemsList")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReplicationGetHttpItemsListResponseObject); ok {
+		if err := validResponse.VisitReplicationGetHttpItemsListResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplicationGetHttpItem operation middleware
+func (sh *strictHandler) ReplicationGetHttpItem(w http.ResponseWriter, r *http.Request, id string) {
+	var request ReplicationGetHttpItemRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplicationGetHttpItem(ctx, request.(ReplicationGetHttpItemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplicationGetHttpItem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReplicationGetHttpItemResponseObject); ok {
+		if err := validResponse.VisitReplicationGetHttpItemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplicationGetSecretsItemsList operation middleware
+func (sh *strictHandler) ReplicationGetSecretsItemsList(w http.ResponseWriter, r *http.Request) {
+	var request ReplicationGetSecretsItemsListRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplicationGetSecretsItemsList(ctx, request.(ReplicationGetSecretsItemsListRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplicationGetSecretsItemsList")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReplicationGetSecretsItemsListResponseObject); ok {
+		if err := validResponse.VisitReplicationGetSecretsItemsListResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplicationGetSecretsItem operation middleware
+func (sh *strictHandler) ReplicationGetSecretsItem(w http.ResponseWriter, r *http.Request, id string) {
+	var request ReplicationGetSecretsItemRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplicationGetSecretsItem(ctx, request.(ReplicationGetSecretsItemRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplicationGetSecretsItem")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReplicationGetSecretsItemResponseObject); ok {
+		if err := validResponse.VisitReplicationGetSecretsItemResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplicationPostSecretsRequests operation middleware
+func (sh *strictHandler) ReplicationPostSecretsRequests(w http.ResponseWriter, r *http.Request, params ReplicationPostSecretsRequestsParams) {
+	var request ReplicationPostSecretsRequestsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplicationPostSecretsRequests(ctx, request.(ReplicationPostSecretsRequestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplicationPostSecretsRequests")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReplicationPostSecretsRequestsResponseObject); ok {
+		if err := validResponse.VisitReplicationPostSecretsRequestsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ServicesUnitLogsGet operation middleware
+func (sh *strictHandler) ServicesUnitLogsGet(w http.ResponseWriter, r *http.Request, unit string) {
+	var request ServicesUnitLogsGetRequestObject
+
+	request.Unit = unit
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ServicesUnitLogsGet(ctx, request.(ServicesUnitLogsGetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ServicesUnitLogsGet")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ServicesUnitLogsGetResponseObject); ok {
+		if err := validResponse.VisitServicesUnitLogsGetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ServicesUnitStatusPut operation middleware
+func (sh *strictHandler) ServicesUnitStatusPut(w http.ResponseWriter, r *http.Request, unit string, params ServicesUnitStatusPutParams) {
+	var request ServicesUnitStatusPutRequestObject
+
+	request.Unit = unit
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ServicesUnitStatusPut(ctx, request.(ServicesUnitStatusPutRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ServicesUnitStatusPut")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ServicesUnitStatusPutResponseObject); ok {
+		if err := validResponse.VisitServicesUnitStatusPutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// WolPostMessage operation middleware
+func (sh *strictHandler) WolPostMessage(w http.ResponseWriter, r *http.Request, alias string) {
+	var request WolPostMessageRequestObject
+
+	request.Alias = alias
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.WolPostMessage(ctx, request.(WolPostMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "WolPostMessage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(WolPostMessageResponseObject); ok {
+		if err := validResponse.VisitWolPostMessageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

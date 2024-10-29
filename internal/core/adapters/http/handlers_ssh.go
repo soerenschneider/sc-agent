@@ -2,97 +2,76 @@ package http_server
 
 import (
 	"cmp"
-	"encoding/json"
+	"context"
 	"errors"
-	"net/http"
 
-	"github.com/rs/zerolog/log"
 	"github.com/soerenschneider/sc-agent/internal/domain/ssh"
 )
 
-func (s *HttpServer) CertsSshPostIssueRequests(w http.ResponseWriter, r *http.Request, params CertsSshPostIssueRequestsParams) {
+func (s *HttpServer) CertsSshPostIssueRequests(ctx context.Context, request CertsSshPostIssueRequestsRequestObject) (CertsSshPostIssueRequestsResponseObject, error) {
 	if s.services.SshCertificates == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return CertsSshPostIssueRequests501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	signRequest, err := s.services.SshCertificates.GetManagedCertificateConfig(params.Id)
-
+	signRequest, err := s.services.SshCertificates.GetManagedCertificateConfig(request.Params.Id)
 	if err != nil {
 		if errors.Is(err, ssh.ErrPkiSshConfigNotFound) {
-			writeRfc7807Error(w, http.StatusNotFound, "not found", "")
-		} else {
-			writeRfc7807Error(w, http.StatusInternalServerError, "could not sign cert", "")
+			return CertsSshPostIssueRequests404ApplicationProblemPlusJSONResponse{}, nil
 		}
-		return
+		return CertsSshPostIssueRequests500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	defaultForce := false
-	forceRenewal := cmp.Or(params.ForceRenewal, &defaultForce)
+	forceRenewal := cmp.Or(request.Params.ForceRenewal, &defaultForce)
 
-	signatureResult, err := s.services.SshCertificates.SignAndUpdateCert(r.Context(), signRequest, *forceRenewal)
+	signatureResult, err := s.services.SshCertificates.SignAndUpdateCert(ctx, signRequest, *forceRenewal)
 	if err != nil {
-		writeRfc7807Error(w, http.StatusNotFound, "could not sign ssh public key", "")
-		return
+		return CertsSshPostIssueRequests500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	if signatureResult.Action == ssh.ActionNewCertificate {
-		w.WriteHeader(http.StatusCreated)
+		return CertsSshPostIssueRequests201Response{}, nil
 	}
+
+	return CertsSshPostIssueRequests200Response{}, nil
 }
 
-func (s *HttpServer) CertsSshGetCertificates(w http.ResponseWriter, r *http.Request, params CertsSshGetCertificatesParams) {
+func (s *HttpServer) CertsSshGetCertificates(_ context.Context, _ CertsSshGetCertificatesRequestObject) (CertsSshGetCertificatesResponseObject, error) {
 	if s.services.SshCertificates == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return CertsSshGetCertificates501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	certs := s.services.SshCertificates.GetManagedCertificatesConfigs()
 
-	var dto SshManagedCertificatesList //nolint:gosimple
-	dto = SshManagedCertificatesList{
+	dto := SshManagedCertificatesList{
 		Data: []SshManagedCertificate{},
 	}
+
 	for _, cert := range certs {
 		dto.Data = append(dto.Data, convertSshManagedCertificate(cert))
 	}
 
-	marshalled, err := json.Marshal(dto)
-	if err != nil {
-		log.Error().Err(err).Msg("could not marshal response")
-		writeRfc7807Error(w, http.StatusNotFound, "unknown", "")
-		return
-	}
-
-	_, _ = w.Write(marshalled)
+	return CertsSshGetCertificates200JSONResponse{
+		dto,
+	}, nil
 }
 
-func (s *HttpServer) CertsSshGetCertificate(w http.ResponseWriter, r *http.Request, id string) {
+func (s *HttpServer) CertsSshGetCertificate(_ context.Context, request CertsSshGetCertificateRequestObject) (CertsSshGetCertificateResponseObject, error) {
 	if s.services.SshCertificates == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return CertsSshGetCertificate501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	cert, err := s.services.SshCertificates.GetManagedCertificateConfig(id)
+	cert, err := s.services.SshCertificates.GetManagedCertificateConfig(request.Id)
 	if err != nil {
 		if errors.Is(err, ssh.ErrPkiSshConfigNotFound) {
-			writeRfc7807Error(w, http.StatusNotFound, "config not found", "")
-			return
+			return CertsSshGetCertificate404ApplicationProblemPlusJSONResponse{}, nil
 		}
-		writeRfc7807Error(w, http.StatusNotFound, "could not fetch signature configs", "")
-		return
+
+		return CertsSshGetCertificate500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	var dto SshManagedCertificate //nolint:gosimple
-	dto = convertSshManagedCertificate(cert)
-	marshalled, err := json.Marshal(dto)
-	if err != nil {
-		log.Error().Err(err).Msg("could not marshal response")
-		writeRfc7807Error(w, http.StatusNotFound, "unknown", "")
-		return
-	}
-
-	_, _ = w.Write(marshalled)
+	dto := convertSshManagedCertificate(cert)
+	return CertsSshGetCertificate200JSONResponse(dto), nil
 }
 
 func convertSshCertificateConfig(conf ssh.CertificateConfig) SshCertificateConfig {

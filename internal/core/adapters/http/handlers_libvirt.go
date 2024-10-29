@@ -1,28 +1,26 @@
 package http_server
 
 import (
-	"net/http"
+	"context"
 )
 
-func (s *HttpServer) LibvirtPostDomainAction(w http.ResponseWriter, r *http.Request, domain string, params LibvirtPostDomainActionParams) {
+func (s *HttpServer) LibvirtPostDomainAction(_ context.Context, request LibvirtPostDomainActionRequestObject) (LibvirtPostDomainActionResponseObject, error) {
 	if s.services.Libvirt == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return LibvirtPostDomainAction501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	var err error
-	if params.Action == LibvirtPostDomainActionParamsActionReboot {
-		err = s.services.Libvirt.RebootDomain(domain)
-	} else if params.Action == LibvirtPostDomainActionParamsActionShutdown {
-		err = s.services.Libvirt.ShutdownDomain(domain)
-	} else if params.Action == LibvirtPostDomainActionParamsActionStart {
-		err = s.services.Libvirt.StartDomain(domain)
+	if request.Params.Action == LibvirtPostDomainActionParamsActionReboot {
+		err = s.services.Libvirt.RebootDomain(request.Domain)
+	} else if request.Params.Action == LibvirtPostDomainActionParamsActionShutdown {
+		err = s.services.Libvirt.ShutdownDomain(request.Domain)
+	} else if request.Params.Action == LibvirtPostDomainActionParamsActionStart {
+		err = s.services.Libvirt.StartDomain(request.Domain)
 	}
 
 	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "action unsuccessful", "")
-		return
+		return LibvirtPostDomainAction500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	w.WriteHeader(http.StatusOK)
+	return LibvirtPostDomainAction200Response{}, nil
 }

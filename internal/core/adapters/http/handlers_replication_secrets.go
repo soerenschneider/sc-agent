@@ -1,91 +1,66 @@
 package http_server
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
-	"net/http"
 	"reflect"
 
 	"github.com/soerenschneider/sc-agent/internal/domain/secret_replication"
 )
 
-func (s *HttpServer) ReplicationGetSecretsItem(w http.ResponseWriter, r *http.Request, id string) {
+func (s *HttpServer) ReplicationGetSecretsItem(ctx context.Context, request ReplicationGetSecretsItemRequestObject) (ReplicationGetSecretsItemResponseObject, error) {
 	if s.services.SecretsReplication == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return ReplicationGetSecretsItem501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	item, err := s.services.SecretsReplication.GetReplicationItem(id)
+	item, err := s.services.SecretsReplication.GetReplicationItem(request.Id)
 	if err != nil {
 		if errors.Is(err, secret_replication.ErrSecretsReplicationItemNotFound) {
-			writeRfc7807Error(w, http.StatusNotFound, "sync item not found", "")
-			return
+			return ReplicationGetSecretsItem404ApplicationProblemPlusJSONResponse{}, nil
 		}
 
-		writeRfc7807Error(w, http.StatusInternalServerError, "could not retrieve sync item", "")
-		return
+		return ReplicationGetSecretsItem500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	var dto ReplicationSecretsItem //nolint:gosimple
-	dto = convertSecretReplicationItem(item)
-	marshalled, err := json.Marshal(dto)
-	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "", "")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(marshalled)
+	dto := convertSecretReplicationItem(item)
+	return ReplicationGetSecretsItem200JSONResponse(dto), nil
 }
 
-func (s *HttpServer) ReplicationPostSecretsRequests(w http.ResponseWriter, r *http.Request, params ReplicationPostSecretsRequestsParams) {
+func (s *HttpServer) ReplicationPostSecretsRequests(ctx context.Context, request ReplicationPostSecretsRequestsRequestObject) (ReplicationPostSecretsRequestsResponseObject, error) {
 	if s.services.SecretsReplication == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return ReplicationPostSecretsRequests501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	syncSecretRequest, err := s.services.SecretsReplication.GetReplicationItem(params.SecretPath)
+	syncSecretRequest, err := s.services.SecretsReplication.GetReplicationItem(request.Params.SecretPath)
 	if err != nil {
 		if errors.Is(err, secret_replication.ErrSecretsReplicationItemNotFound) {
-			writeRfc7807Error(w, http.StatusNotFound, "sync item not found", "")
-			return
+			return ReplicationPostSecretsRequests404ApplicationProblemPlusJSONResponse{}, nil
 		}
 
-		writeRfc7807Error(w, http.StatusInternalServerError, "could not retrieve sync item", "")
-		return
+		return ReplicationPostSecretsRequests500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	updatedSecret, err := s.services.SecretsReplication.Replicate(r.Context(), syncSecretRequest)
+	updatedSecret, err := s.services.SecretsReplication.Replicate(ctx, syncSecretRequest)
 	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "could not sync item", "")
-		return
+		return ReplicationPostSecretsRequests500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	if updatedSecret {
-		w.WriteHeader(http.StatusCreated)
-	} else {
-		w.WriteHeader(http.StatusOK)
+		return ReplicationPostSecretsRequests201Response{}, nil
 	}
+
+	return ReplicationPostSecretsRequests200Response{}, nil
 }
 
-func (s *HttpServer) ReplicationGetSecretsItemsList(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) ReplicationGetSecretsItemsList(ctx context.Context, request ReplicationGetSecretsItemsListRequestObject) (ReplicationGetSecretsItemsListResponseObject, error) {
 	if s.services.SecretsReplication == nil {
-		writeRfc7807Error(w, http.StatusNotImplemented, "Function not implemented", "")
-		return
+		return ReplicationGetSecretsItemsList501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
 	configuredSyncItems := s.services.SecretsReplication.GetReplicationItems()
-
-	var dto ReplicationSecretsItemsList //nolint:gosimple
-	dto = convertSecretReplicationItems(configuredSyncItems)
-	marshalled, err := json.Marshal(dto)
-	if err != nil {
-		writeRfc7807Error(w, http.StatusInternalServerError, "", "")
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(marshalled)
+	return ReplicationGetSecretsItemsList200JSONResponse{
+		Data: convertSecretReplicationItems(configuredSyncItems).Data,
+	}, nil
 }
 
 func convertSecretReplicationStatus(status secret_replication.SecretReplicationStatus) ReplicationSecretsItemStatus {
