@@ -101,8 +101,8 @@ func (s *HttpServer) getOpenApiHandler() (http.Handler, error) {
 		options.Middlewares = append(options.Middlewares, s.principalFilter.tlsClientCertMiddleware)
 	}
 
-	fickdich := NewStrictHandler(s, nil)
-	return HandlerWithOptions(fickdich, options), nil
+	strictHandler := NewStrictHandler(s, nil)
+	return HandlerWithOptions(strictHandler, options), nil
 }
 
 func (s *HttpServer) StartServer(ctx context.Context, wg *sync.WaitGroup) error {
