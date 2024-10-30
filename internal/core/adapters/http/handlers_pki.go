@@ -9,6 +9,11 @@ import (
 	"github.com/soerenschneider/sc-agent/internal/services/components/pki"
 )
 
+func (s *HttpServer) CertsX509PostIssueRequests(ctx context.Context, request CertsX509PostIssueRequestsRequestObject) (CertsX509PostIssueRequestsResponseObject, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (s *HttpServer) CertsX509GetCertificatesList(_ context.Context, _ CertsX509GetCertificatesListRequestObject) (CertsX509GetCertificatesListResponseObject, error) {
 	if s.services.Pki == nil {
 		return CertsX509GetCertificatesList501ApplicationProblemPlusJSONResponse{}, nil

@@ -37,11 +37,6 @@ type HttpServer struct {
 	principalFilter *TlsClientPrincipalFilter
 }
 
-func (s *HttpServer) CertsX509PostIssueRequests(ctx context.Context, request CertsX509PostIssueRequestsRequestObject) (CertsX509PostIssueRequestsResponseObject, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 type WebServerOpts func(*HttpServer) error
 
 func New(address string, services *ports.Components, opts ...WebServerOpts) (*HttpServer, error) {
