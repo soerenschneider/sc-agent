@@ -152,6 +152,10 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 		return err
 	}
 
+	return s.updateFile(data, conf)
+}
+
+func (s *Service) updateFile(data []byte, conf http_replication.ReplicationItem) error {
 	hash := hashContent(data)
 	if isMismatchedChecksum(conf, hash) {
 		conf.Status = http_replication.InvalidChecksum
@@ -160,12 +164,14 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 		return http_replication.ErrMismatchedHash
 	}
 
-	oldHash, found := s.cache[conf.ReplicationConf.Id]
-	if found && oldHash == hash {
+	oldHash, itemAlreadyCached := s.cache[conf.ReplicationConf.Id]
+	if itemAlreadyCached && oldHash == hash {
+		// item is already downloaded. let's check if the item on disk has been changed by a 3rd party since our last check.
 		diskContent, err := conf.Destination.Read()
 		if err == nil {
 			diskHash := hashContent(diskContent)
 			if diskHash == hash {
+				// file exists locally and is identical to the item we downloaded, we're done
 				return nil
 			}
 			log.Info().Str(logComponent, httpReplicationComponent).Str("id", conf.ReplicationConf.Id).Msg("noticed file has changed on disk, proceeding to overwrite")
@@ -175,7 +181,7 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 	s.cache[conf.ReplicationConf.Id] = hash
 	updateMetricsHash(conf.ReplicationConf.Id, data)
 
-	if !found {
+	if !itemAlreadyCached {
 		read, err := conf.Destination.Read()
 		if err == nil && hash == hashContent(read) {
 			log.Debug().Str(logComponent, httpReplicationComponent).Str("id", conf.ReplicationConf.Id).Msg("file already exists locally")
