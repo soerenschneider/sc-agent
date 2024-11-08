@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	vaultSecretSyncer     = "secrets-replication"
+	logComponent          = "component"
+	componentName         = "secrets-replication"
 	defaultTickerInterval = 5 * time.Minute
 )
 
@@ -36,7 +37,7 @@ type Service struct {
 	mutex               sync.Mutex
 	replicationInterval time.Duration
 
-	hashes map[string]string
+	cache map[string]string
 }
 
 func NewService(client ReplicationClient, syncItems []secret_replication.ReplicationItem, opts ...SecretsReplicationOpts) (*Service, error) {
@@ -57,7 +58,7 @@ func NewService(client ReplicationClient, syncItems []secret_replication.Replica
 	ret := &Service{
 		client:              client,
 		replicationItems:    syncItemsMap,
-		hashes:              map[string]string{},
+		cache:               map[string]string{},
 		replicationInterval: defaultTickerInterval,
 	}
 
@@ -74,11 +75,11 @@ func NewService(client ReplicationClient, syncItems []secret_replication.Replica
 func (s *Service) StartContinuousReplication(ctx context.Context) {
 	s.once.Do(func() {
 		if len(s.replicationItems) == 0 {
-			log.Warn().Str("component", vaultSecretSyncer).Msg("no items defined, not scheduling auto-renewals")
+			log.Warn().Str(logComponent, componentName).Msg("no items defined, not scheduling auto-renewals")
 			return
 		}
 
-		log.Info().Str("component", vaultSecretSyncer).Msgf("start replication of %d secrets", len(s.replicationItems))
+		log.Info().Str(logComponent, componentName).Msgf("start replication of %d secrets", len(s.replicationItems))
 		jitter := 5 * time.Minute
 		checkInterval := s.replicationInterval - (jitter / 2)
 		ticker := time.NewTicker(checkInterval)
@@ -162,30 +163,53 @@ func (s *Service) Replicate(ctx context.Context, item secret_replication.Replica
 		return false, err
 	}
 
-	newHash := hash(formatted)
-	oldHash, found := s.hashes[item.ReplicationConf.SecretPath]
-	if found {
-		if newHash == oldHash {
-			metrics.SecretsCacheHit.WithLabelValues(item.ReplicationConf.SecretPath).Inc()
-			log.Debug().Str("component", vaultSecretSyncer).Msgf("secret %s has not been updated since last time we read it", item.ReplicationConf.SecretPath)
-			return false, nil
-		}
-		log.Info().Str("component", vaultSecretSyncer).Str("secret_path", item.ReplicationConf.SecretPath).Str("dest", item.ReplicationConf.DestUri).Msg("detected update in secret")
-	}
-	s.hashes[item.ReplicationConf.SecretPath] = newHash
-
-	//if err := s.saveFormattedSecret(formatted, item.ReplicationConf.DestUri); err != nil {
-	if err := item.Destination.Write(formatted); err != nil {
-		metrics.SecretReplicationErrors.WithLabelValues(item.ReplicationConf.SecretPath, "save").Inc()
-		return false, err
-	}
-
-	metrics.SecretsRead.WithLabelValues(item.ReplicationConf.SecretPath).Inc()
-	log.Info().Str("component", vaultSecretSyncer).Str("secret_path", item.ReplicationConf.SecretPath).Str("dest", item.ReplicationConf.DestUri).Msg("successfully synced secret")
-	return true, nil
+	return true, s.updateFile(formatted, item)
 }
 
-func hash(data []byte) string {
+func (s *Service) updateFile(data []byte, conf secret_replication.ReplicationItem) error {
+	hash := hashContent(data)
+
+	oldHash, itemAlreadyCached := s.cache[conf.ReplicationConf.Id]
+	log.Info().Str(logComponent, componentName).Str("hash", hash).Str("oldHash", oldHash).Bool("itemDownloaded", itemAlreadyCached).Msg("Cache check #1")
+	if itemAlreadyCached && oldHash == hash {
+		// item is already downloaded. let's check if the item on disk has been changed by a 3rd party since our last check.
+		diskContent, err := conf.Destination.Read()
+		if err == nil {
+			diskHash := hashContent(diskContent)
+			log.Info().Str(logComponent, componentName).Str("hash", hash).Str("diskHash", diskHash).Msg("Cache check #2")
+			if diskHash == hash {
+				// file exists locally and is identical to the item we downloaded, we're done
+				return nil
+			}
+			log.Info().Str(logComponent, componentName).Str("id", conf.ReplicationConf.Id).Msg("noticed file has changed on disk, proceeding to overwrite")
+		} else {
+			log.Error().Str(logComponent, componentName).Err(err).Msg("Cache check #3")
+		}
+	}
+
+	s.cache[conf.ReplicationConf.Id] = hash
+
+	if !itemAlreadyCached {
+		read, err := conf.Destination.Read()
+		if err == nil && hash == hashContent(read) {
+			log.Debug().Str(logComponent, componentName).Str("id", conf.ReplicationConf.Id).Msg("file already exists locally")
+			return nil
+		}
+	}
+
+	log.Info().Str(logComponent, componentName).Str("id", conf.ReplicationConf.Id).Msg("writing item to disk")
+	if err := conf.Destination.Write(data); err != nil {
+		metrics.SecretsRead.WithLabelValues(conf.ReplicationConf.Id, "write_file").Inc()
+		return err
+	}
+
+	metrics.SecretsRead.WithLabelValues(conf.ReplicationConf.SecretPath).Inc()
+	log.Info().Str(logComponent, componentName).Str("secret_path", conf.ReplicationConf.SecretPath).Str("dest", conf.ReplicationConf.DestUri).Msg("successfully synced secret")
+
+	return nil
+}
+
+func hashContent(data []byte) string {
 	hasher := sha256.New()
 	hasher.Write(data)
 	hashBytes := hasher.Sum(nil)
