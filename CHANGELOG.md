@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.8.0](https://github.com/soerenschneider/sc-agent/compare/v1.7.0...v1.8.0) (2024-11-08)
+
+
+### Features
+
+* **http_replication:** notice when file has changed on disk outside of sc-agent ([a82b100](https://github.com/soerenschneider/sc-agent/commit/a82b1002cba906f3a9c2d901c926ce7068be273d))
+* **secret_replication:** notice when file has changed on disk outside of sc-agent ([c1d1999](https://github.com/soerenschneider/sc-agent/commit/c1d1999a2b8ed76ec8a446f5aa24eac2decf916e))
+
+
+### Bug Fixes
+
+* **deps:** bump github.com/prometheus/common from 0.60.0 to 0.60.1 ([ff808d3](https://github.com/soerenschneider/sc-agent/commit/ff808d328b2f23de6c8c9e09b6308829175b0d3b))
+* fix lint issues ([8050d37](https://github.com/soerenschneider/sc-agent/commit/8050d37592f23699ab1e4d0ee117a19648da5808))
+
 ## [1.7.0](https://github.com/soerenschneider/sc-agent/compare/v1.6.0...v1.7.0) (2024-10-27)
 
 
