@@ -162,7 +162,14 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 
 	oldHash, found := s.cache[conf.ReplicationConf.Id]
 	if found && oldHash == hash {
-		return nil
+		diskContent, err := conf.Destination.Read()
+		if err == nil {
+			diskHash := hashContent(diskContent)
+			if diskHash == hash {
+				return nil
+			}
+			log.Info().Str(logComponent, httpReplicationComponent).Str("id", conf.ReplicationConf.Id).Msg("noticed file has changed on disk, proceeding to overwrite")
+		}
 	}
 
 	s.cache[conf.ReplicationConf.Id] = hash
