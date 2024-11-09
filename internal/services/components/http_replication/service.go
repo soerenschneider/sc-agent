@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"hash/fnv"
 	"io"
 	"math/rand/v2"
@@ -146,6 +147,11 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 	defer func() {
 		_ = resp.Body.Close()
 	}()
+
+	if resp.StatusCode/100 != 2 {
+		metrics.HttpReplicationErrors.WithLabelValues(conf.ReplicationConf.Id, "request_errors").Inc()
+		return fmt.Errorf("wrong status code, expected 2xx got %d", resp.StatusCode)
+	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
