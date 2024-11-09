@@ -11,6 +11,7 @@ import (
 	"io"
 	"math/rand/v2"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -155,7 +156,13 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
+		metrics.HttpReplicationErrors.WithLabelValues(conf.ReplicationConf.Id, "data_errors").Inc()
 		return err
+	}
+
+	if strings.TrimSpace(string(data)) == "" {
+		metrics.HttpReplicationErrors.WithLabelValues(conf.ReplicationConf.Id, "data_errors").Inc()
+		return errors.New("empty payload")
 	}
 
 	return s.updateFile(data, conf)
