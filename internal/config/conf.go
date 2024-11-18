@@ -181,7 +181,7 @@ func ReadConfig(confFile string) (*Config, error) {
 }
 
 func readConfigFile(confFile string, conf *Config) error {
-	expandedConfFile, err := expandPath(confFile)
+	expandedConfFile, err := ExpandPath(confFile)
 	if err != nil {
 		log.Warn().Err(err).Msg("could not expand path, trying verbatim path")
 		expandedConfFile = confFile
@@ -196,7 +196,7 @@ func readConfigFile(confFile string, conf *Config) error {
 }
 
 func readConfigDir(confDir string, conf *Config) error {
-	expandedConfDir, err := expandPath(confDir)
+	expandedConfDir, err := ExpandPath(confDir)
 	if err != nil {
 		log.Warn().Err(err).Str("path", confDir).Msg("could not expand path, trying verbatim path")
 		expandedConfDir = confDir
@@ -264,7 +264,7 @@ func convertMapToStruct(m map[string]interface{}, s interface{}) error {
 }
 
 // ExpandPath expands the `~` in a path to the user's home directory.
-func expandPath(path string) (string, error) {
+func ExpandPath(path string) (string, error) {
 	if strings.HasPrefix(path, "~") {
 		usr, err := user.Current()
 		if err != nil {

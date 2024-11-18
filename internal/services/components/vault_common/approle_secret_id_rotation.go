@@ -34,10 +34,11 @@ type ApproleClient interface {
 }
 
 type ApproleSecretIdRotatorService struct {
-	checkInterval time.Duration
-	client        ApproleClient
-	minPercentage float64
-	vaultConfig   *vault_config.Vault
+	checkInterval     time.Duration
+	client            ApproleClient
+	minPercentage     float64
+	vaultConfig       *vault_config.Vault
+	approleIdentifier string
 
 	once   sync.Once
 	fsImpl afero.Fs
@@ -45,13 +46,14 @@ type ApproleSecretIdRotatorService struct {
 
 type ApproleSecretIdRotationOption func(a *ApproleSecretIdRotatorService) error
 
-func NewApproleUpdater(client ApproleClient, config *vault_config.Vault, opts ...ApproleSecretIdRotationOption) (*ApproleSecretIdRotatorService, error) {
+func NewApproleUpdater(client ApproleClient, approleIdentifier string, config *vault_config.Vault, opts ...ApproleSecretIdRotationOption) (*ApproleSecretIdRotatorService, error) {
 	ret := &ApproleSecretIdRotatorService{
-		client:        client,
-		vaultConfig:   config,
-		minPercentage: defaultMinPercentage,
-		fsImpl:        afero.NewOsFs(),
-		checkInterval: defaultInterval,
+		client:            client,
+		vaultConfig:       config,
+		minPercentage:     defaultMinPercentage,
+		fsImpl:            afero.NewOsFs(),
+		checkInterval:     defaultInterval,
+		approleIdentifier: approleIdentifier,
 	}
 
 	var errs error
@@ -70,7 +72,7 @@ func (a *ApproleSecretIdRotatorService) StartSecretIdRotation(ctx context.Contex
 		checkInterval := a.checkInterval - (jitter / 2)
 		ticker := time.NewTicker(checkInterval)
 		if err := a.ConditionallyRotateSecretId(a.vaultConfig.RoleId, a.vaultConfig.SecretIdFile, false); err != nil {
-			log.Error().Str(logComponent, approleComponentName).Err(err).Msg("Conditionally rotating secret_id failed")
+			log.Error().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Err(err).Msg("Conditionally rotating secret_id failed")
 		}
 
 		for {
@@ -80,7 +82,7 @@ func (a *ApproleSecretIdRotatorService) StartSecretIdRotation(ctx context.Contex
 				return
 			case <-ticker.C:
 				if err := a.ConditionallyRotateSecretId(a.vaultConfig.RoleId, a.vaultConfig.SecretIdFile, false); err != nil {
-					log.Error().Str(logComponent, approleComponentName).Err(err).Msg("Conditionally rotating secret_id failed")
+					log.Error().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Err(err).Msg("Conditionally rotating secret_id failed")
 				}
 			}
 		}
@@ -90,35 +92,36 @@ func (a *ApproleSecretIdRotatorService) StartSecretIdRotation(ctx context.Contex
 func (a *ApproleSecretIdRotatorService) ConditionallyRotateSecretId(roleName, secretIdFile string, isAccessor bool) error {
 	secretId, err := a.readSecretId(secretIdFile)
 	if err != nil {
-		log.Error().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Err(err).Msg("could not read secret_id")
+		log.Error().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Str("id", a.approleIdentifier).Err(err).Msg("could not read secret_id")
 		metrics.SecretIdRotationErrors.WithLabelValues(secretIdFile, "read_secret_id").Inc()
 		return err
 	}
 
-	if vault.IsWrappedToken(secretIdFile) {
-		log.Warn().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Msg("Detected a wrapped secret_id, trying to rotate immediately")
+	isWrapped, _ := vault.IsWrappedToken(secretIdFile)
+	if isWrapped {
+		log.Warn().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Str("id", a.approleIdentifier).Msg("Detected a wrapped secret_id, trying to rotate immediately")
 	} else {
 		secretIdInfo, err := a.client.Lookup(roleName, secretId, isAccessor)
 		if err != nil && !errors.Is(err, errAlreadyExpired) {
-			log.Error().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Err(err).Msg("could not lookup secret_id")
+			log.Error().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, secretIdFile).Err(err).Msg("could not lookup secret_id")
 			return err
 		}
 
 		if secretIdInfo == nil {
-			log.Warn().Str(logComponent, approleComponentName).Msg("empty response for looking up secret_id, this indicates an expired secret_id")
+			log.Warn().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Msg("empty response for looking up secret_id, this indicates an expired secret_id")
 		} else {
 			secretIdPercentage := secretIdInfo.GetPercentage()
 			metrics.SecretIdPercentage.WithLabelValues(secretIdFile).Set(secretIdPercentage)
 			metrics.SecretIdTtl.WithLabelValues(secretIdFile).Set(float64(secretIdInfo.Ttl))
 			if secretIdPercentage >= a.minPercentage {
-				log.Debug().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Str("expiration", secretIdInfo.Expiration.String()).Float64("lifetime", secretIdPercentage).Msg("not renewing secret_id")
+				log.Debug().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, secretIdFile).Str("expiration", secretIdInfo.Expiration.String()).Float64("lifetime", secretIdPercentage).Msg("not renewing secret_id")
 				return nil
 			}
-			log.Info().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Str("expiration", secretIdInfo.Expiration.String()).Float64("lifetime", secretIdPercentage).Msg("Trying to renew secret_id")
+			log.Info().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, secretIdFile).Str("expiration", secretIdInfo.Expiration.String()).Float64("lifetime", secretIdPercentage).Msg("Trying to renew secret_id")
 		}
 	}
 
-	log.Info().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Msg("generating new secret_id")
+	log.Info().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, secretIdFile).Msg("generating new secret_id")
 	newSecretId, err := a.client.GenerateSecretId(roleName)
 	if err != nil {
 		log.Error().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Err(err).Msg("could not generate new secret_id")
@@ -134,7 +137,7 @@ func (a *ApproleSecretIdRotatorService) ConditionallyRotateSecretId(roleName, se
 
 	err = a.client.DestroySecretId(roleName, secretId, isAccessor)
 	if err != nil {
-		log.Error().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Err(err).Msg("could not destroy secret_id")
+		log.Error().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, secretIdFile).Err(err).Msg("could not destroy secret_id")
 		metrics.SecretIdRotationErrors.WithLabelValues(secretIdFile, "destroy_secret_id").Inc()
 	}
 	log.Info().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Msg("successfully rotated secret_id")

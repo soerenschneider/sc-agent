@@ -5,10 +5,10 @@ import (
 	"strings"
 )
 
-func IsWrappedToken(file string) bool {
+func IsWrappedToken(file string) (bool, error) {
 	content, err := os.ReadFile(file)
 	if err != nil {
-		return false
+		return false, err
 	}
-	return strings.HasPrefix(string(content), "hvs.")
+	return strings.HasPrefix(string(content), "hvs."), nil
 }

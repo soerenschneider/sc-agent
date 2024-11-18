@@ -66,11 +66,11 @@ func getOpts(conf vault_config.Vault) ([]vault_common.ApproleSecretIdRotationOpt
 	return opts, nil
 }
 
-func buildVaultClient(key string, conf vault_config.Vault) error {
+func buildVaultClient(clientId string, conf vault_config.Vault) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	_, found := clients[key]
+	_, found := clients[clientId]
 	if found {
 		return nil
 	}
@@ -89,7 +89,7 @@ func buildVaultClient(key string, conf vault_config.Vault) error {
 		return err
 	}
 
-	tokenRenewer, err := vault_common.NewTokenRenewer(vaultClient, auth, key)
+	tokenRenewer, err := vault_common.NewTokenRenewer(vaultClient, auth, clientId)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func buildVaultClient(key string, conf vault_config.Vault) error {
 		if err != nil {
 			return err
 		}
-		secretIdRotator, err = vault_common.NewApproleUpdater(approleClient, &conf)
+		secretIdRotator, err = vault_common.NewApproleUpdater(approleClient, clientId, &conf)
 		if err != nil {
 			return err
 		}
@@ -115,7 +115,7 @@ func buildVaultClient(key string, conf vault_config.Vault) error {
 		return err
 	}
 
-	clients[key] = client
+	clients[clientId] = client
 	return nil
 }
 
@@ -148,8 +148,11 @@ func buildVaultAuth(conf vault_config.Vault) (vault.AuthMethod, error) {
 			loginOpts = append(loginOpts, auth.WithMountPath(conf.MountApprole))
 		}
 
-		wrappedToken := pkg_vault.IsWrappedToken(conf.SecretIdFile)
-		if wrappedToken {
+		isWrappedToken, err := pkg_vault.IsWrappedToken(conf.SecretIdFile)
+		if err != nil {
+			return nil, err
+		}
+		if isWrappedToken {
 			log.Info().Msg("Trying to authenticate using wrapped secret_id token")
 			loginOpts = append(loginOpts, auth.WithWrappingToken())
 		}
