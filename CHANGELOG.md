@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.1](https://github.com/soerenschneider/sc-agent/compare/v1.8.0...v1.8.1) (2024-11-18)
+
+
+### Bug Fixes
+
+* **http_replication:** only proceed if response's status code is 2xx ([544ad13](https://github.com/soerenschneider/sc-agent/commit/544ad130d83d1f3e3a23090767a00adac5b518d6))
+* **http_replication:** only replicate item if response is not empty ([3ee51d8](https://github.com/soerenschneider/sc-agent/commit/3ee51d81bdf62caefe9bd52d40ba7c9778378efb))
+
 ## [1.8.0](https://github.com/soerenschneider/sc-agent/compare/v1.7.0...v1.8.0) (2024-11-08)
 
 
