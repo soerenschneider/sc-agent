@@ -20,7 +20,7 @@ require (
 	github.com/rs/zerolog v1.33.0
 	github.com/segmentio/kafka-go v0.4.47
 	github.com/spf13/afero v1.11.0
-	github.com/zcalusic/sysinfo v1.1.2
+	github.com/zcalusic/sysinfo v1.1.3
 	gitlab.com/tanna.dev/openapi-doc-http-handler v0.2.0
 	go.uber.org/multierr v1.11.0
 	golang.org/x/crypto v0.28.0
