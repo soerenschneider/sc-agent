@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.8.1](https://github.com/soerenschneider/sc-agent/compare/v1.8.0...v1.8.1) (2025-01-12)
+
+
+### Bug Fixes
+
+* **deps:** bump github.com/go-playground/validator/v10 ([12e9543](https://github.com/soerenschneider/sc-agent/commit/12e9543ddb720182089df21d689dc87a281dc90d))
+* **deps:** bump github.com/zcalusic/sysinfo from 1.1.2 to 1.1.3 ([0a710d7](https://github.com/soerenschneider/sc-agent/commit/0a710d7900b51b986dcf0262cb2c4685923bfee7))
+* **deps:** bump golang from 1.23.2 to 1.23.4 ([45c7064](https://github.com/soerenschneider/sc-agent/commit/45c7064617d732a3bfd5578f9e98c11b987bac11))
+* **deps:** bump golang.org/x/term from 0.25.0 to 0.28.0 ([5e87f77](https://github.com/soerenschneider/sc-agent/commit/5e87f778ed7471bce4270519d5b6ffffb42095d2))
+* **http_replication:** only proceed if response's status code is 2xx ([544ad13](https://github.com/soerenschneider/sc-agent/commit/544ad130d83d1f3e3a23090767a00adac5b518d6))
+* **http_replication:** only replicate item if response is not empty ([3ee51d8](https://github.com/soerenschneider/sc-agent/commit/3ee51d81bdf62caefe9bd52d40ba7c9778378efb))
+
 ## [1.8.0](https://github.com/soerenschneider/sc-agent/compare/v1.7.0...v1.8.0) (2024-11-08)
 
 
