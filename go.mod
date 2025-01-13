@@ -4,7 +4,7 @@ go 1.22.2
 
 require (
 	github.com/adrianbrad/queue v1.3.0
-	github.com/caarlos0/env/v11 v11.2.2
+	github.com/caarlos0/env/v11 v11.3.1
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/getkin/kin-openapi v0.128.0
 	github.com/go-playground/validator/v10 v10.23.0
