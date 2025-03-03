@@ -1,6 +1,7 @@
 module github.com/soerenschneider/sc-agent
 
 go 1.22.2
+toolchain go1.23.6
 
 require (
 	github.com/adrianbrad/queue v1.3.0
@@ -23,7 +24,7 @@ require (
 	github.com/zcalusic/sysinfo v1.1.3
 	gitlab.com/tanna.dev/openapi-doc-http-handler v0.2.0
 	go.uber.org/multierr v1.11.0
-	golang.org/x/crypto v0.33.0
+	golang.org/x/crypto v0.35.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	golang.org/x/sys v0.30.0
 	golang.org/x/term v0.29.0
