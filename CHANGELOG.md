@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/soerenschneider/sc-agent/compare/v1.9.0...v1.9.1) (2025-03-29)
+
+
+### Bug Fixes
+
+* fix timestamp metric ([fe582dc](https://github.com/soerenschneider/sc-agent/commit/fe582dcece64640466d98a1e861440d0974dcb44))
+
 ## [1.9.0](https://github.com/soerenschneider/sc-agent/compare/v1.8.0...v1.9.0) (2025-02-21)
 
 
