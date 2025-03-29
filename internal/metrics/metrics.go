@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
 	"go.uber.org/multierr"
@@ -18,10 +20,27 @@ import (
 
 const (
 	namespace                        = "sc_agent"
-	defaultMetricsDumpFrequency      = 1 * time.Minute
 	defaultMetricsHeartbeatFrequency = 1 * time.Minute
 	metricsServerComponent           = "metrics"
 )
+
+var (
+	ProcessStart = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "process_start_timestamp_seconds",
+		Help:      "Timestamp of start of sc-agent",
+	})
+
+	Heartbeat = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "heartbeat_timestamp_seconds",
+		Help:      "Heartbeat of sc-agent",
+	})
+)
+
+func init() {
+	ProcessStart.SetToCurrentTime()
+}
 
 type MetricsServer struct {
 	address string
@@ -91,8 +110,13 @@ func (s *MetricsServer) StartServer(ctx context.Context, wg *sync.WaitGroup) err
 		}
 	}()
 
+	heartbeatTimer := time.NewTicker(defaultMetricsHeartbeatFrequency)
+	defer heartbeatTimer.Stop()
+
 	for {
 		select {
+		case <-heartbeatTimer.C:
+			Heartbeat.SetToCurrentTime()
 		case <-ctx.Done():
 			log.Info().Str("component", metricsServerComponent).Msg("Stopping server")
 			return server.Shutdown(ctx)

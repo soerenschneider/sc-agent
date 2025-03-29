@@ -14,12 +14,6 @@ var (
 		Name:      "start_timestamp_seconds",
 	})
 
-	Heartbeat = promauto.NewGauge(prometheus.GaugeOpts{
-		Namespace: namespace,
-		Subsystem: subsystemRebootManager,
-		Name:      "heartbeat_timestamp_seconds",
-	})
-
 	RebootIsPaused = promauto.NewGauge(prometheus.GaugeOpts{
 		Namespace: namespace,
 		Subsystem: subsystemRebootManager,
