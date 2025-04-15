@@ -897,6 +897,32 @@ components:
           items:
             $ref: '#/components/schemas/PostHooks'
 
+    FileValidation:
+      type: object
+      title: FileValidation
+      description: "Validates a file's content"
+      properties:
+        test:
+          type: string
+          example: "sha256"
+          x-go-type-skip-optional-pointer: true
+          description: The type of validation to perform.
+          enum:
+            - sha256
+            - starts_with
+            - ends_with
+            - regex
+        arg:
+          type: string
+          example: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          x-go-type-skip-optional-pointer: true
+          description: the value to test against
+        invert_result:
+          type: boolean
+          example: true
+          x-go-type-skip-optional-pointer: true
+          description: invert the result of the check
+
     ReplicationHttpItem:
       type: object
       title: HttpReplicationItem
@@ -920,10 +946,8 @@ components:
           maxItems: 100
           items:
             type: string
-        expected_checksum:
-          type: string
-          example: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
-          description: only save the file if the checksum matches
+        file_validation:
+          $ref: '#/components/schemas/FileValidation'
         status:
           type: string
           example: "synced"
@@ -933,7 +957,7 @@ components:
             - unknown
             - synced
             - failed
-            - invalid_checksum
+            - validation_failed
         post_hooks:
           type: array
           x-go-type-skip-optional-pointer: true

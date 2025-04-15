@@ -14,7 +14,7 @@ import (
 	"github.com/soerenschneider/sc-agent/internal/core/ports"
 	"github.com/soerenschneider/sc-agent/internal/domain"
 	"github.com/soerenschneider/sc-agent/internal/domain/http_replication"
-	http_replication2 "github.com/soerenschneider/sc-agent/internal/services/components/http_replication"
+	http_replication_svc "github.com/soerenschneider/sc-agent/internal/services/components/http_replication"
 	"github.com/soerenschneider/sc-agent/internal/services/components/libvirt"
 	"github.com/soerenschneider/sc-agent/internal/services/components/packages"
 	"github.com/soerenschneider/sc-agent/internal/services/components/reboot_manager/app"
@@ -119,33 +119,44 @@ func BuildDeps(conf config.Config) (*ports.Components, error) {
 	return ret, errs
 }
 
-func buildHttpReplication(conf config.HttpReplication) (*http_replication2.Service, error) {
-	items := []http_replication.ReplicationItem{}
+func buildHttpReplication(conf config.HttpReplication) (*http_replication_svc.Service, error) {
+	items := make([]http_replication.ReplicationItem, 0, len(conf.ReplicationItems))
+
 	for key, val := range conf.ReplicationItems {
 		destStorage, err := buildCertStorage(val.Destinations)
 		if err != nil {
 			return nil, err
 		}
-		postHooks := []domain.PostHook{}
+		postHooks := make([]domain.PostHook, 0, len(val.PostHooks))
 		for key, hook := range val.PostHooks {
 			postHooks = append(postHooks, domain.PostHook{
 				Name: key,
 				Cmd:  hook,
 			})
 		}
+
+		var fileValidationConf *http_replication.FileValidation
+		if val.Validation != nil {
+			fileValidationConf = &http_replication.FileValidation{
+				Test:         val.Validation.Test,
+				Arg:          val.Validation.Arg,
+				InvertResult: val.Validation.InvertResult,
+			}
+		}
+
 		items = append(items, http_replication.ReplicationItem{
 			PostHooks: postHooks,
 			ReplicationConf: http_replication.ReplicationConf{
-				Id:           key,
-				Source:       val.Source,
-				Destinations: val.Destinations,
-				Sha256Sum:    val.Sha256Sum,
+				Id:             key,
+				Source:         val.Source,
+				Destinations:   val.Destinations,
+				FileValidation: fileValidationConf,
 			},
 			Destination: destStorage,
 		})
 	}
 
-	return http_replication2.New(httpClient, items)
+	return http_replication_svc.New(httpClient, items)
 }
 
 func buildRebootManager(config config.Config) (ports.RebootManager, error) {
@@ -226,6 +237,6 @@ func buildReleaseWatcher(conf config.Config) (*release_watcher.ReleaseWatcher, e
 	return release_watcher.New(httpClient, internal.BuildVersion)
 }
 
-func buildCertStorage(storageConf []string) (http_replication2.StorageImplementation, error) {
+func buildCertStorage(storageConf []string) (http_replication_svc.StorageImplementation, error) {
 	return storage.NewMultiFilesystemStorage(storageConf...)
 }

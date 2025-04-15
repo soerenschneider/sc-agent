@@ -52,25 +52,33 @@ func convertHttpReplicationItems(items []http_replication.ReplicationItem) Repli
 	return ReplicationHttpItemsList{Data: ret}
 }
 
-func convertHttpReplicationItem(item http_replication.ReplicationItem) ReplicationHttpItem {
-	var expectedChecksum *string
-	if len(item.ReplicationConf.Sha256Sum) > 0 {
-		expectedChecksum = &item.ReplicationConf.Sha256Sum
+func convertFileValidation(item *http_replication.FileValidation) *FileValidation {
+	if item == nil {
+		return nil
 	}
+
+	return &FileValidation{
+		Test:         FileValidationTest(item.Test),
+		Arg:          item.Arg,
+		InvertResult: item.InvertResult,
+	}
+}
+
+func convertHttpReplicationItem(item http_replication.ReplicationItem) ReplicationHttpItem {
 	return ReplicationHttpItem{
-		Id:               item.ReplicationConf.Id,
-		DestUris:         item.ReplicationConf.Destinations,
-		Source:           item.ReplicationConf.Source,
-		ExpectedChecksum: expectedChecksum,
-		PostHooks:        convertPosthooks(item.PostHooks),
-		Status:           convertHttpReplicationStatus(item.Status),
+		Id:             item.ReplicationConf.Id,
+		DestUris:       item.ReplicationConf.Destinations,
+		Source:         item.ReplicationConf.Source,
+		FileValidation: convertFileValidation(item.ReplicationConf.FileValidation),
+		PostHooks:      convertPosthooks(item.PostHooks),
+		Status:         convertHttpReplicationStatus(item.Status),
 	}
 }
 
 func convertHttpReplicationStatus(status http_replication.Status) ReplicationHttpItemStatus {
 	switch status {
-	case http_replication.InvalidChecksum:
-		return ReplicationHttpItemStatusInvalidChecksum
+	case http_replication.ValidationFailed:
+		return ReplicationHttpItemStatusValidationFailed
 	case http_replication.FailedStatus:
 		return ReplicationHttpItemStatusFailed
 	case http_replication.Synced:

@@ -15,6 +15,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	FileValidationTestSha256     = "sha256"
+	FileValidationTestRegex      = "regex"
+	FileValidationTestStartsWith = "starts_with"
+	FileValidationTestEndsWith   = "ends_with"
+)
+
 type Config struct {
 	Http *Http `yaml:"http"`
 
@@ -109,9 +116,15 @@ type HttpReplication struct {
 
 type HttpReplicationItem struct {
 	Source       string            `yaml:"source" validate:"http_url"`
-	Sha256Sum    string            `yaml:"sha256" validate:"omitempty,sha256"`
 	Destinations []string          `yaml:"dest" validate:"required"`
 	PostHooks    map[string]string `yaml:"post_hooks"`
+	Validation   *FileValidation   `yaml:"validation"`
+}
+
+type FileValidation struct {
+	Test         string `yaml:"test" validate:"omitempty,oneof=sha256 regex starts_with ends_with"`
+	Arg          string `yaml:"arg" validate:"required_with=Test"`
+	InvertResult bool   `yaml:"invert_result"`
 }
 
 func (conf *HttpReplication) UnmarshalYAML(node *yaml.Node) error {

@@ -11,7 +11,6 @@ import (
 	"io"
 	"math/rand/v2"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -160,7 +159,11 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 		return err
 	}
 
-	if strings.TrimSpace(string(data)) == "" {
+	if conf.ReplicationConf.TrimWhitespaces {
+		data = bytes.TrimSpace(data)
+	}
+
+	if len(bytes.TrimSpace(data)) == 0 {
 		metrics.HttpReplicationErrors.WithLabelValues(conf.ReplicationConf.Id, "data_errors").Inc()
 		return errors.New("empty payload")
 	}
@@ -170,12 +173,6 @@ func (s *Service) Replicate(ctx context.Context, conf http_replication.Replicati
 
 func (s *Service) updateFile(data []byte, conf http_replication.ReplicationItem) error {
 	hash := hashContent(data)
-	if isMismatchedChecksum(conf, hash) {
-		conf.Status = http_replication.InvalidChecksum
-		log.Error().Str(logComponent, httpReplicationComponent).Str("hash_expected", conf.ReplicationConf.Sha256Sum).Str("hash_actual", hash).Str("id", conf.ReplicationConf.Id).Msg("invalid hash")
-		metrics.HttpReplicationErrors.WithLabelValues(conf.ReplicationConf.Id, "hash_mismatch").Inc()
-		return http_replication.ErrMismatchedHash
-	}
 
 	oldHash, itemAlreadyCached := s.cache[conf.ReplicationConf.Id]
 	if itemAlreadyCached && oldHash == hash {
@@ -189,6 +186,21 @@ func (s *Service) updateFile(data []byte, conf http_replication.ReplicationItem)
 			}
 			log.Info().Str(logComponent, httpReplicationComponent).Str("id", conf.ReplicationConf.Id).Msg("noticed file has changed on disk, proceeding to overwrite")
 		}
+	}
+
+	var validationSuccess = true
+	if conf.ReplicationConf.FileValidation != nil {
+		var err error
+		validationSuccess, err = conf.ReplicationConf.FileValidation.Accept(data)
+		if err != nil {
+			return fmt.Errorf("could not validate replicated file: %w", err)
+		}
+	}
+
+	if !validationSuccess {
+		conf.Status = http_replication.ValidationFailed
+		metrics.HttpReplicationErrors.WithLabelValues(conf.ReplicationConf.Id, "file_validation_failed").Inc()
+		return http_replication.ErrFileValidationFailed
 	}
 
 	s.cache[conf.ReplicationConf.Id] = hash
@@ -214,10 +226,6 @@ func (s *Service) updateFile(data []byte, conf http_replication.ReplicationItem)
 	}
 
 	return nil
-}
-
-func isMismatchedChecksum(conf http_replication.ReplicationItem, hash string) bool {
-	return len(conf.ReplicationConf.Sha256Sum) > 0 && hash != conf.ReplicationConf.Sha256Sum
 }
 
 func hashContent(data []byte) string {
