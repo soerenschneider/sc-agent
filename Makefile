@@ -33,6 +33,9 @@ cross-build: version-info
 	GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags="-w -X '$(MODULE)/internal.BuildVersion=${VERSION}' -X '$(MODULE)/internal.CommitHash=${COMMIT_HASH}'" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-armv7    ./cmd
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0       go build -ldflags="-w -X '$(MODULE)/internal.BuildVersion=${VERSION}' -X '$(MODULE)/internal.CommitHash=${COMMIT_HASH}'" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-aarch64  ./cmd
 
+validate-openapi-spec:
+	docker run --rm -it -v $(shell pwd):/tmp stoplight/spectral lint --ruleset "/tmp/.spectral.yaml" "/tmp/openapi.yaml"
+
 docker-build:
 	docker build -t "$(DOCKER_PREFIX)/sc-agent-server" .
 
