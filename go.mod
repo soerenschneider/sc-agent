@@ -1,6 +1,7 @@
 module github.com/soerenschneider/sc-agent
 
 go 1.22.2
+toolchain go1.23.7
 
 require (
 	github.com/caarlos0/env/v11 v11.3.1
@@ -71,7 +72,7 @@ require (
 	github.com/speakeasy-api/openapi-overlay v0.9.0 // indirect
 	github.com/vmware-labs/yaml-jsonpath v0.3.2 // indirect
 	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/net v0.34.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
