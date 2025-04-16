@@ -10,9 +10,10 @@ func (s *HttpServer) K0sPostAction(_ context.Context, request K0sPostActionReque
 	}
 
 	var err error
-	if request.Params.Action == K0sPostActionParamsActionStart {
+	switch request.Params.Action {
+	case K0sPostActionParamsActionStart:
 		err = s.services.K0s.Start()
-	} else if request.Params.Action == K0sPostActionParamsActionStop {
+	case K0sPostActionParamsActionStop:
 		err = s.services.K0s.Stop()
 	}
 

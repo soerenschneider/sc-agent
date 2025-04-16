@@ -33,12 +33,13 @@ func (s *HttpServer) ServicesUnitStatusPut(ctx context.Context, request Services
 	}
 
 	var err error
-	if request.Params.Action == Restart {
+	switch request.Params.Action {
+	case Restart:
 		err = s.services.Services.Restart(request.Unit)
-	} else if request.Params.Action == Start {
+	case Start:
 		// TODO: implement
 		return ServicesUnitStatusPut501ApplicationProblemPlusJSONResponse{}, nil
-	} else if request.Params.Action == Stop {
+	case Stop:
 		// TODO: implement
 		return ServicesUnitStatusPut501ApplicationProblemPlusJSONResponse{}, nil
 	}

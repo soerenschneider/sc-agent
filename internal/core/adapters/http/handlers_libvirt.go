@@ -10,11 +10,12 @@ func (s *HttpServer) LibvirtPostDomainAction(_ context.Context, request LibvirtP
 	}
 
 	var err error
-	if request.Params.Action == LibvirtPostDomainActionParamsActionReboot {
+	switch request.Params.Action {
+	case LibvirtPostDomainActionParamsActionReboot:
 		err = s.services.Libvirt.RebootDomain(request.Domain)
-	} else if request.Params.Action == LibvirtPostDomainActionParamsActionShutdown {
+	case LibvirtPostDomainActionParamsActionShutdown:
 		err = s.services.Libvirt.ShutdownDomain(request.Domain)
-	} else if request.Params.Action == LibvirtPostDomainActionParamsActionStart {
+	case LibvirtPostDomainActionParamsActionStart:
 		err = s.services.Libvirt.StartDomain(request.Domain)
 	}
 

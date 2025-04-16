@@ -11,9 +11,10 @@ func (s *HttpServer) PowerPostAction(ctx context.Context, request PowerPostActio
 	}
 
 	var err error
-	if request.Params.Action == Reboot {
+	switch request.Params.Action {
+	case Reboot:
 		err = s.services.PowerStatus.Reboot()
-	} else if request.Params.Action == Shutdown {
+	case Shutdown:
 		err = s.services.PowerStatus.Shutdown()
 	}
 
@@ -44,9 +45,10 @@ func (s *HttpServer) PowerRebootManagerPostStatus(ctx context.Context, request P
 		return PowerRebootManagerPostStatus500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	if request.Params.Action == Pause {
+	switch request.Params.Action {
+	case Pause:
 		s.services.RebootManager.Pause()
-	} else if request.Params.Action == Unpause {
+	case Unpause:
 		s.services.RebootManager.Unpause()
 	}
 

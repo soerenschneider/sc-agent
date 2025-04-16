@@ -130,7 +130,7 @@ func (c *WindowedPrecondition) PerformCheck() bool {
 
 	// adjust overlapping dates
 	if endLocalTime.Before(startLocalTime) {
-		return !(now.After(endLocalTime) && now.Before(startLocalTime))
+		return !now.After(endLocalTime) || !now.Before(startLocalTime)
 	}
 
 	return startLocalTime.Before(now) && endLocalTime.After(now)

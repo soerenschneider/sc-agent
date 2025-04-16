@@ -29,9 +29,10 @@ func NewDynamicCidrResolver(vaultAddr string) (*DynamicCidrResolver, error) {
 
 	address := parsedURL.Host
 	if parsedURL.Port() == "" { // Port() returns an empty string if no port is specified
-		if parsedURL.Scheme == "http" {
+		switch parsedURL.Scheme {
+		case "http":
 			address += ":80"
-		} else if parsedURL.Scheme == "https" {
+		case "https":
 			address += ":443"
 		}
 	}
