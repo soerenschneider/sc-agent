@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.10.0](https://github.com/soerenschneider/sc-agent/compare/v1.9.0...v1.10.0) (2025-04-16)
+
+
+### Features
+
+* add customizable validation for replication items ([5c60e64](https://github.com/soerenschneider/sc-agent/commit/5c60e6435d90964a62be71cc58eaa02c9c6c1a31))
+
+
+### Bug Fixes
+
+* **deps:** bump github.com/getkin/kin-openapi from 0.128.0 to 0.131.0 ([59bd84f](https://github.com/soerenschneider/sc-agent/commit/59bd84f872cb749a5f9a185ac71df272a27dffbe))
+* **deps:** bump github.com/getkin/kin-openapi from 0.128.0 to 0.131.0 ([364a8fa](https://github.com/soerenschneider/sc-agent/commit/364a8fa256b7bdf3e33b5c35cd38e9dc2ca46371))
+* **deps:** bump github.com/go-jose/go-jose/v4 from 4.0.1 to 4.0.5 ([7440b79](https://github.com/soerenschneider/sc-agent/commit/7440b79aae9f6deb20e799d41e1c5c4412d03d7e))
+* **deps:** bump github.com/go-jose/go-jose/v4 from 4.0.1 to 4.0.5 ([3c11d26](https://github.com/soerenschneider/sc-agent/commit/3c11d26dcb54c93739de09caa633da45b76f17d8))
+* **deps:** bump github.com/go-playground/validator/v10 ([03e3505](https://github.com/soerenschneider/sc-agent/commit/03e3505433a7d0c0ee207aaa1509c7dcf060bcab))
+* **deps:** bump github.com/go-playground/validator/v10 from 10.23.0 to 10.26.0 ([db7bb7a](https://github.com/soerenschneider/sc-agent/commit/db7bb7af51f289cde49e348b82af2b9edc0b445b))
+* **deps:** bump github.com/hashicorp/vault/api from 1.15.0 to 1.16.0 ([923546e](https://github.com/soerenschneider/sc-agent/commit/923546e89659a55be21190a3456cdbd7dde19517))
+* **deps:** bump github.com/hashicorp/vault/api from 1.15.0 to 1.16.0 ([ec9780c](https://github.com/soerenschneider/sc-agent/commit/ec9780c03f99bf07629982c240e08bf007c8741e))
+* **deps:** bump github.com/prometheus-community/pro-bing ([ee451a7](https://github.com/soerenschneider/sc-agent/commit/ee451a7ba2209ed6c25378e7eb705ba2e6ec9ee7))
+* **deps:** bump github.com/prometheus-community/pro-bing from 0.6.1 to 0.7.0 ([fd8d422](https://github.com/soerenschneider/sc-agent/commit/fd8d4221ad1841f8750f4a6983d1dfa596d1126d))
+* **deps:** bump github.com/prometheus/client_golang ([31a22ea](https://github.com/soerenschneider/sc-agent/commit/31a22ea4ae76f8537742a860703a7c2392e4c72c))
+* **deps:** bump github.com/prometheus/client_golang from 1.20.5 to 1.22.0 ([360f74b](https://github.com/soerenschneider/sc-agent/commit/360f74b7c5507a1c894c5f6343f08e7b0478978d))
+* **deps:** bump github.com/prometheus/common from 0.62.0 to 0.63.0 ([8fd2081](https://github.com/soerenschneider/sc-agent/commit/8fd2081d1129d908f6ee132649c02205065bf34e))
+* **deps:** bump github.com/prometheus/common from 0.62.0 to 0.63.0 ([4a4c2ef](https://github.com/soerenschneider/sc-agent/commit/4a4c2ef182032dee65f362d08ef911c44262bc50))
+* **deps:** bump github.com/rs/zerolog from 1.33.0 to 1.34.0 ([60e3f73](https://github.com/soerenschneider/sc-agent/commit/60e3f73112acf75950e890931f83f3dd78ee4cd4))
+* **deps:** bump github.com/rs/zerolog from 1.33.0 to 1.34.0 ([c379984](https://github.com/soerenschneider/sc-agent/commit/c379984f566b4c789b948de1d8a37a4f186705a6))
+* **deps:** bump github.com/spf13/afero from 1.11.0 to 1.14.0 ([17f2044](https://github.com/soerenschneider/sc-agent/commit/17f20444b082b8e553c6a2a0fcb5cbaf60bf9c72))
+* **deps:** bump github.com/spf13/afero from 1.11.0 to 1.14.0 ([fce66d9](https://github.com/soerenschneider/sc-agent/commit/fce66d90a49f7bfc0e091514ad8f6300d7fbf290))
+* **deps:** bump golang from 1.24.0 to 1.24.2 ([09fac07](https://github.com/soerenschneider/sc-agent/commit/09fac0726505f8be80e629308620b808d468a94e))
+* **deps:** bump golang from 1.24.0 to 1.24.2 ([f9c8c32](https://github.com/soerenschneider/sc-agent/commit/f9c8c3251b7df6de84b655b075a132f90360c13b))
+* **deps:** bump golang.org/x/crypto from 0.33.0 to 0.37.0 ([7423f58](https://github.com/soerenschneider/sc-agent/commit/7423f58af7ce6f1e3d1a60c296bd1f5a75eaf016))
+* **deps:** bump golang.org/x/crypto from 0.33.0 to 0.37.0 ([ef69378](https://github.com/soerenschneider/sc-agent/commit/ef693784e577083f40373e325e9c9c5fe545ccc6))
+* **deps:** bump golang.org/x/net from 0.34.0 to 0.36.0 ([edf4958](https://github.com/soerenschneider/sc-agent/commit/edf4958bc0aea503ce1aea3df6642c400cc71cc5))
+* **deps:** bump golang.org/x/net from 0.34.0 to 0.36.0 ([64aaa88](https://github.com/soerenschneider/sc-agent/commit/64aaa88d60933e0f30212d2b3385c4781c55093d))
+* fix timestamp metric ([fe582dc](https://github.com/soerenschneider/sc-agent/commit/fe582dcece64640466d98a1e861440d0974dcb44))
+
 ## [1.9.0](https://github.com/soerenschneider/sc-agent/compare/v1.8.0...v1.9.0) (2025-02-21)
 
 
