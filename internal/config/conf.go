@@ -24,6 +24,7 @@ const (
 
 type Config struct {
 	Http *Http `yaml:"http"`
+	Nats *Nats `yaml:"nats"`
 
 	Packages           *Packages                 `yaml:"packages"`
 	Acme               *vault.Acme               `yaml:"acme"`
@@ -76,6 +77,30 @@ func (conf *Http) UnmarshalYAML(node *yaml.Node) error {
 
 	// Assign the values from the temporary struct to the original struct
 	*conf = Http(*tmp)
+	return nil
+}
+
+type Nats struct {
+	Url     string `yaml:"url" validate:"url"`
+	Subject string `yaml:"subject" validate:"required"`
+	Enabled bool   `yaml:"enabled"`
+}
+
+func (conf *Nats) UnmarshalYAML(node *yaml.Node) error {
+	type Alias Nats // Create an alias to avoid recursion during unmarshalling
+
+	// Define conf temporary struct with default values
+	tmp := &Alias{
+		Enabled: true,
+	}
+
+	// Unmarshal the yaml data into the temporary struct
+	if err := node.Decode(&tmp); err != nil {
+		return err
+	}
+
+	// Assign the values from the temporary struct to the original struct
+	*conf = Nats(*tmp)
 	return nil
 }
 
