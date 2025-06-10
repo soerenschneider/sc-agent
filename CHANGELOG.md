@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.11.0](https://github.com/soerenschneider/sc-agent/compare/v1.10.0...v1.11.0) (2025-06-10)
+
+
+### Features
+
+* initial support for nats events ([eb60062](https://github.com/soerenschneider/sc-agent/commit/eb60062c44bd21cdac8b0d8fc3a4cbc012c5500e))
+* support to change owner of secret_id file ([0f11744](https://github.com/soerenschneider/sc-agent/commit/0f11744a44e4d99eb4fc258006a050c94c58f4e0))
+
+
+### Bug Fixes
+
+* add missing package ([a4ce229](https://github.com/soerenschneider/sc-agent/commit/a4ce229619519b1b964a9a84f8ab3b56f9f04438))
+* fix golangci linter issues ([9ec2c22](https://github.com/soerenschneider/sc-agent/commit/9ec2c22c882d9bb28ef4866b5a6c620c90b09323))
+
 ## [1.10.0](https://github.com/soerenschneider/sc-agent/compare/v1.9.0...v1.10.0) (2025-04-16)
 
 
