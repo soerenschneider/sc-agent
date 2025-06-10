@@ -27,7 +27,7 @@ require (
 	github.com/zcalusic/sysinfo v1.1.3
 	gitlab.com/tanna.dev/openapi-doc-http-handler v0.2.0
 	go.uber.org/multierr v1.11.0
-	golang.org/x/crypto v0.37.0
+	golang.org/x/crypto v0.39.0
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
 	golang.org/x/sys v0.33.0
 	golang.org/x/term v0.31.0
