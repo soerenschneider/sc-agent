@@ -28,7 +28,7 @@ func (m *MachineCmd) SetCpuGovernor(governor system.Governor) error {
 	for cpuIndex := 0; cpuIndex < runtime.NumCPU(); cpuIndex++ {
 		err := setCPUGovernor(cpuIndex, governor)
 		if err != nil {
-			multierr.Append(errs, err)
+			errs = multierr.Append(errs, err)
 		}
 	}
 	if errs != nil {
@@ -55,6 +55,7 @@ func setCPUGovernor(cpuIndex int, governor system.Governor) error {
 		return fmt.Errorf("CPU%d or cpufreq not supported on this system", cpuIndex)
 	}
 
+	//nolint G306
 	return os.WriteFile(cpuPath, []byte(governor+"\n"), 0644)
 }
 
