@@ -14,6 +14,7 @@ import (
 	"github.com/soerenschneider/sc-agent/internal/core/ports"
 	"github.com/soerenschneider/sc-agent/internal/domain"
 	"github.com/soerenschneider/sc-agent/internal/domain/http_replication"
+	"github.com/soerenschneider/sc-agent/internal/events"
 	http_replication_svc "github.com/soerenschneider/sc-agent/internal/services/components/http_replication"
 	"github.com/soerenschneider/sc-agent/internal/services/components/libvirt"
 	"github.com/soerenschneider/sc-agent/internal/services/components/packages"
@@ -35,6 +36,9 @@ var httpClient = retryablehttp.NewClient().HTTPClient
 func BuildDeps(conf config.Config) (*ports.Components, error) {
 	ret := &ports.Components{}
 	var err, errs error
+
+	events.ConfiguredEventSink, err = buildEventSink(conf, ret)
+	errs = multierr.Append(errs, err)
 
 	ret.Packages, err = buildPackages(conf)
 	if err != nil {
