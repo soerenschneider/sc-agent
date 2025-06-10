@@ -3,6 +3,11 @@ package vault_common
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"os/user"
+	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -71,7 +76,7 @@ func (a *ApproleSecretIdRotatorService) StartSecretIdRotation(ctx context.Contex
 		jitter := 5 * time.Minute
 		checkInterval := a.checkInterval - (jitter / 2)
 		ticker := time.NewTicker(checkInterval)
-		if err := a.ConditionallyRotateSecretId(a.vaultConfig.RoleId, a.vaultConfig.SecretIdFile, false); err != nil {
+		if err := a.ConditionallyRotateSecretId(*a.vaultConfig, false); err != nil {
 			log.Error().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Err(err).Msg("Conditionally rotating secret_id failed")
 		}
 
@@ -81,7 +86,7 @@ func (a *ApproleSecretIdRotatorService) StartSecretIdRotation(ctx context.Contex
 				ticker.Stop()
 				return
 			case <-ticker.C:
-				if err := a.ConditionallyRotateSecretId(a.vaultConfig.RoleId, a.vaultConfig.SecretIdFile, false); err != nil {
+				if err := a.ConditionallyRotateSecretId(*a.vaultConfig, false); err != nil {
 					log.Error().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Err(err).Msg("Conditionally rotating secret_id failed")
 				}
 			}
@@ -89,21 +94,21 @@ func (a *ApproleSecretIdRotatorService) StartSecretIdRotation(ctx context.Contex
 	})
 }
 
-func (a *ApproleSecretIdRotatorService) ConditionallyRotateSecretId(roleName, secretIdFile string, isAccessor bool) error {
-	secretId, err := a.readSecretId(secretIdFile)
+func (a *ApproleSecretIdRotatorService) ConditionallyRotateSecretId(cnf vault_config.Vault, isAccessor bool) error {
+	secretId, err := a.readSecretId(cnf.SecretIdFile)
 	if err != nil {
-		log.Error().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Str("id", a.approleIdentifier).Err(err).Msg("could not read secret_id")
-		metrics.SecretIdRotationErrors.WithLabelValues(secretIdFile, "read_secret_id").Inc()
+		log.Error().Str(logComponent, approleComponentName).Str(logSecretIdFile, cnf.SecretIdFile).Str("id", a.approleIdentifier).Err(err).Msg("could not read secret_id")
+		metrics.SecretIdRotationErrors.WithLabelValues(cnf.SecretIdFile, "read_secret_id").Inc()
 		return err
 	}
 
-	isWrapped, _ := vault.IsWrappedToken(secretIdFile)
+	isWrapped, _ := vault.IsWrappedToken(cnf.SecretIdFile)
 	if isWrapped {
-		log.Warn().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Str("id", a.approleIdentifier).Msg("Detected a wrapped secret_id, trying to rotate immediately")
+		log.Warn().Str(logComponent, approleComponentName).Str(logSecretIdFile, cnf.SecretIdFile).Str("id", a.approleIdentifier).Msg("Detected a wrapped secret_id, trying to rotate immediately")
 	} else {
-		secretIdInfo, err := a.client.Lookup(roleName, secretId, isAccessor)
+		secretIdInfo, err := a.client.Lookup(cnf.RoleId, secretId, isAccessor)
 		if err != nil && !errors.Is(err, errAlreadyExpired) {
-			log.Error().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, secretIdFile).Err(err).Msg("could not lookup secret_id")
+			log.Error().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, cnf.SecretIdFile).Err(err).Msg("could not lookup secret_id")
 			return err
 		}
 
@@ -111,41 +116,59 @@ func (a *ApproleSecretIdRotatorService) ConditionallyRotateSecretId(roleName, se
 			log.Warn().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Msg("empty response for looking up secret_id, this indicates an expired secret_id")
 		} else {
 			secretIdPercentage := secretIdInfo.GetPercentage()
-			metrics.SecretIdPercentage.WithLabelValues(secretIdFile).Set(secretIdPercentage)
-			metrics.SecretIdTtl.WithLabelValues(secretIdFile).Set(float64(secretIdInfo.Ttl))
+			metrics.SecretIdPercentage.WithLabelValues(cnf.SecretIdFile).Set(secretIdPercentage)
+			metrics.SecretIdTtl.WithLabelValues(cnf.SecretIdFile).Set(float64(secretIdInfo.Ttl))
 			if secretIdPercentage >= a.minPercentage {
-				log.Debug().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, secretIdFile).Str("expiration", secretIdInfo.Expiration.String()).Float64("lifetime", secretIdPercentage).Msg("not renewing secret_id")
+				log.Debug().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, cnf.SecretIdFile).Str("expiration", secretIdInfo.Expiration.String()).Float64("lifetime", secretIdPercentage).Msg("not renewing secret_id")
 				return nil
 			}
-			log.Info().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, secretIdFile).Str("expiration", secretIdInfo.Expiration.String()).Float64("lifetime", secretIdPercentage).Msg("Trying to renew secret_id")
+			log.Info().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, cnf.SecretIdFile).Str("expiration", secretIdInfo.Expiration.String()).Float64("lifetime", secretIdPercentage).Msg("Trying to renew secret_id")
 		}
 	}
 
-	log.Info().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, secretIdFile).Msg("generating new secret_id")
-	newSecretId, err := a.client.GenerateSecretId(roleName)
+	log.Info().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, cnf.SecretIdFile).Msg("generating new secret_id")
+	newSecretId, err := a.client.GenerateSecretId(cnf.RoleId)
 	if err != nil {
-		log.Error().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Err(err).Msg("could not generate new secret_id")
-		metrics.SecretIdRotationErrors.WithLabelValues(secretIdFile, "generate_secret_id").Inc()
+		log.Error().Str(logComponent, approleComponentName).Str(logSecretIdFile, cnf.SecretIdFile).Err(err).Msg("could not generate new secret_id")
+		metrics.SecretIdRotationErrors.WithLabelValues(cnf.SecretIdFile, "generate_secret_id").Inc()
 		return err
 	}
 
-	if err := a.writeSecretIdFile(newSecretId, secretIdFile); err != nil {
-		log.Error().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Err(err).Msg("could not write new secret_id to file - not going to destroy old secret_id")
-		metrics.SecretIdRotationErrors.WithLabelValues(secretIdFile, "write_file").Inc()
+	if err := a.writeSecretIdFile(newSecretId, cnf); err != nil {
+		log.Error().Str(logComponent, approleComponentName).Str(logSecretIdFile, cnf.SecretIdFile).Err(err).Msg("could not write new secret_id to file - not going to destroy old secret_id")
+		metrics.SecretIdRotationErrors.WithLabelValues(cnf.SecretIdFile, "write_file").Inc()
 		return err
 	}
 
-	err = a.client.DestroySecretId(roleName, secretId, isAccessor)
+	err = a.client.DestroySecretId(cnf.RoleId, secretId, isAccessor)
 	if err != nil {
-		log.Error().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, secretIdFile).Err(err).Msg("could not destroy secret_id")
-		metrics.SecretIdRotationErrors.WithLabelValues(secretIdFile, "destroy_secret_id").Inc()
+		log.Error().Str(logComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, cnf.SecretIdFile).Err(err).Msg("could not destroy secret_id")
+		metrics.SecretIdRotationErrors.WithLabelValues(cnf.SecretIdFile, "destroy_secret_id").Inc()
 	}
-	log.Info().Str(logComponent, approleComponentName).Str(logSecretIdFile, secretIdFile).Msg("successfully rotated secret_id")
+	log.Info().Str(logComponent, approleComponentName).Str(logSecretIdFile, cnf.SecretIdFile).Msg("successfully rotated secret_id")
 	return nil
 }
 
-func (a *ApproleSecretIdRotatorService) writeSecretIdFile(newSecretId string, dest string) error {
-	return afero.WriteFile(a.fsImpl, dest, []byte(newSecretId), 0600)
+var ErrFileOwnership = errors.New("could not update file ownership")
+
+func (a *ApproleSecretIdRotatorService) writeSecretIdFile(newSecretId string, cnf vault_config.Vault) error {
+	if err := afero.WriteFile(a.fsImpl, cnf.SecretIdFile, []byte(newSecretId), 0600); err != nil {
+		return err
+	}
+
+	if cnf.SecretIdFileUser != "" && runtime.GOOS != "windows" {
+		usr, err := user.Lookup(cnf.SecretIdFileUser)
+		if err != nil {
+			return fmt.Errorf("%w: could not lookup user %s", ErrFileOwnership, cnf.SecretIdFileUser)
+		}
+
+		uid, _ := strconv.Atoi(usr.Uid)
+		if err := os.Chown(cnf.SecretIdFile, uid, 0); err != nil {
+			return fmt.Errorf("%w: %w", ErrFileOwnership, err)
+		}
+	}
+
+	return nil
 }
 
 func (a *ApproleSecretIdRotatorService) readSecretId(secretIdFile string) (string, error) {

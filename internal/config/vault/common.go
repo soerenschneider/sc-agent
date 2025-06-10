@@ -15,6 +15,7 @@ type Vault struct {
 	Token                    string                    `yaml:"token" env:"VAULT_TOKEN" validate:"required_if=AuthMethod token"`
 	RoleId                   string                    `yaml:"role_id" validate:"required_if=AuthMethod approle"`
 	SecretIdFile             string                    `yaml:"secret_id_file" validate:"required_if=AuthMethod approle,file"`
+	SecretIdFileUser         string                    `yaml:"secret_id_file_user" validate:"string"`
 	MountApprole             string                    `yaml:"approle_mount" validate:"required_if=AuthMethod approle"`
 	ApproleCidrTokenResolver *VaultApproleCidrResolver `yaml:"cidr_token_resolver"`
 	ApproleCidrLoginResolver *VaultApproleCidrResolver `yaml:"cidr_login_resolver"`
