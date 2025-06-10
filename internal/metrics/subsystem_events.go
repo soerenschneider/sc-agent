@@ -8,6 +8,18 @@ import (
 const eventsSubsystem = "events"
 
 var (
+	EventQueueCapacity = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: namespace,
+		Subsystem: eventsSubsystem,
+		Name:      "queue_capacity_total",
+	})
+
+	EventQueueSize = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: namespace,
+		Subsystem: eventsSubsystem,
+		Name:      "queue_size_total",
+	})
+
 	EventReceivedTimestamp = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: namespace,
 		Subsystem: eventsSubsystem,
@@ -19,6 +31,18 @@ var (
 		Subsystem: eventsSubsystem,
 		Name:      "received_total",
 	}, []string{"source"})
+
+	NatsConnectionStatus = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: namespace,
+		Subsystem: eventsSubsystem,
+		Name:      "nats_connection_status",
+	}, []string{"status"})
+
+	NatsErrors = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace,
+		Subsystem: eventsSubsystem,
+		Name:      "nats_connection_errors_total",
+	}, []string{"error"})
 
 	RabbitMqErrors = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: namespace,

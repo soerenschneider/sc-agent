@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"github.com/soerenschneider/sc-agent/internal/events"
 	"github.com/soerenschneider/sc-agent/internal/metrics"
 	"github.com/soerenschneider/sc-agent/internal/services/components/reboot_manager/group"
 	"github.com/soerenschneider/sc-agent/internal/services/components/reboot_manager/uptime"
+	cloudevents "github.com/soerenschneider/soeren.cloud-events/pkg/sc-agent/reboot"
 	"go.uber.org/multierr"
 )
 
@@ -172,5 +174,10 @@ func (app *RebootManager) tryReboot(group *group.Group) error {
 	}
 
 	log.Info().Str("component", "reboot-manager").Msg("Trying to reboot...")
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := events.Accept(ctx, cloudevents.NewSystemRebootedEvent("source", nil)); err != nil {
+		log.Error().Err(err).Msg("could not send event")
+	}
 	return app.rebootImpl.Reboot()
 }
