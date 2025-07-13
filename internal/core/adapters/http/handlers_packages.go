@@ -17,11 +17,11 @@ func (s *HttpServer) PackagesInstalledGet(_ context.Context, _ PackagesInstalled
 	}
 
 	return PackagesInstalledGet200JSONResponse{
-		Packages: convertPackages(resp),
+		Packages: ConvertPackagesToDto(resp),
 	}, nil
 }
 
-func convertPackages(packages []domain.PackageInfo) []PackageInfo {
+func ConvertPackagesToDto(packages []domain.PackageInfo) []PackageInfo {
 	ret := make([]PackageInfo, len(packages))
 	for index := range packages {
 		ret[index] = PackageInfo{
@@ -44,7 +44,7 @@ func (s *HttpServer) PackagesUpdatesGet(_ context.Context, _ PackagesUpdatesGetR
 	}
 
 	return PackagesUpdatesGet200JSONResponse{
-		UpdatablePackages: convertPackages(resp.UpdatablePackages),
+		UpdatablePackages: ConvertPackagesToDto(resp.UpdatablePackages),
 		UpdatesAvailable:  resp.UpdatesAvailable,
 	}, nil
 }

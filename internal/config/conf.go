@@ -1,6 +1,9 @@
 package config
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -20,10 +23,13 @@ const (
 	FileValidationTestRegex      = "regex"
 	FileValidationTestStartsWith = "starts_with"
 	FileValidationTestEndsWith   = "ends_with"
+
+	DefaultMqttClientIdPrefix = "sc-agent"
 )
 
 type Config struct {
 	Http *Http `yaml:"http"`
+	Mqtt *Mqtt `yaml:"mqtt"`
 	Nats *Nats `yaml:"nats"`
 
 	Packages           *Packages                 `yaml:"packages"`
@@ -48,6 +54,83 @@ type Config struct {
 	Metrics *Http `yaml:"metrics"`
 
 	ConfigDir string `yaml:"config_dir"`
+}
+
+type Mqtt struct {
+	Broker         string `yaml:"broker" validate:"omitempty,broker"`
+	ClientId       string `yaml:"client_id" validate:"required_with=Broker ''"`
+	CaCertFile     string `yaml:"tls_ca_cert" validate:"omitempty,file"`
+	ClientCertFile string `yaml:"tls_client_cert" validate:"omitempty,required_unless=ClientKeyFile '',file"`
+	ClientKeyFile  string `yaml:"tls_client_key" validate:"omitempty,required_unless=ClientCertFile '',file"`
+	TlsInsecure    bool   `yaml:"tls_insecure"`
+
+	TopicHostPrefix    string   `yaml:"topic_host_prefix" validate:"required_with=Broker '',required,printascii"`
+	TopicGroupPrefixes []string `yaml:"topic_group_prefixes" validate:"omitempty,dive,required,printascii"`
+
+	Enabled bool `yaml:"enabled"`
+}
+
+func (conf *Mqtt) UnmarshalYAML(node *yaml.Node) error {
+	type Alias Mqtt // Create an alias to avoid recursion during unmarshalling
+
+	// Define conf temporary struct with default values
+	tmp := &Alias{
+		Enabled: true,
+	}
+
+	hostname, err := os.Hostname()
+	if err == nil {
+		tmp.ClientId = fmt.Sprintf("%s-%s", DefaultMqttClientIdPrefix, hostname)
+	}
+
+	// Unmarshal the yaml data into the temporary struct
+	if err := node.Decode(&tmp); err != nil {
+		return err
+	}
+
+	// Assign the values from the temporary struct to the original struct
+	*conf = Mqtt(*tmp)
+	return nil
+}
+
+func (conf *Mqtt) UsesTlsClientCerts() bool {
+	return len(conf.CaCertFile) > 0 && len(conf.ClientCertFile) > 0 && len(conf.ClientKeyFile) > 0
+}
+
+func (conf *Mqtt) TlsConfig() *tls.Config {
+	log.Info().Str("component", "config").Msg("Building TLS config...")
+
+	certPool, err := x509.SystemCertPool()
+	if err != nil {
+		log.Warn().Err(err).Str("component", "config").Msg("Could not get system cert pool")
+		certPool = x509.NewCertPool()
+	}
+
+	if conf.UsesTlsClientCerts() {
+		pemCerts, err := os.ReadFile(conf.CaCertFile)
+		if err != nil {
+			log.Error().Err(err).Str("component", "config").Msg("Could not read CA cert file")
+		} else {
+			certPool.AppendCertsFromPEM(pemCerts)
+		}
+	}
+
+	tlsConf := &tls.Config{
+		RootCAs:            certPool,
+		ClientAuth:         tls.RequestClientCert,
+		InsecureSkipVerify: conf.TlsInsecure, // #nosec G402
+	}
+
+	clientCertDefined := len(conf.ClientCertFile) > 0
+	clientKeyDefined := len(conf.ClientKeyFile) > 0
+	if clientCertDefined && clientKeyDefined {
+		tlsConf.GetClientCertificate = func(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+			cert, err := tls.LoadX509KeyPair(conf.ClientCertFile, conf.ClientKeyFile)
+			return &cert, err
+		}
+	}
+
+	return tlsConf
 }
 
 type Http struct {

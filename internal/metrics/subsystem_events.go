@@ -44,6 +44,24 @@ var (
 		Name:      "nats_connection_errors_total",
 	}, []string{"error"})
 
+	MqttReconnectionsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Subsystem: eventsSubsystem,
+		Name:      "mqtt_reconnections_total",
+	})
+
+	MqttConnectionsLostTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Subsystem: eventsSubsystem,
+		Name:      "mqtt_connections_lost_total",
+	})
+
+	MqttBrokersConnectedTotal = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: namespace,
+		Subsystem: eventsSubsystem,
+		Name:      "mqtt_connected_brokers_total",
+	})
+
 	RabbitMqErrors = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: eventsSubsystem,

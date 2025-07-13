@@ -86,6 +86,20 @@ func main() {
 		}()
 	}
 
+	if conf.Mqtt != nil && conf.Mqtt.Enabled {
+		mqttListener, err := buildMqttClient(conf, services)
+		if err != nil {
+			log.Fatal().Err(err).Msg("could not build mqtt listener")
+		}
+		wg.Add(1)
+
+		go func() {
+			if err := mqttListener.StartListener(ctx, wg); err != nil {
+				scAgentFatalErrors <- fmt.Errorf("could not start mqtt listener: %w", err)
+			}
+		}()
+	}
+
 	if conf.Metrics != nil && conf.Metrics.Enabled {
 		metricsServer, err := buildMetricsServer(*conf)
 		if err != nil {

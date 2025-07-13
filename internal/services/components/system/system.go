@@ -60,7 +60,7 @@ func setCPUGovernor(cpuIndex int, governor system.Governor) error {
 }
 
 func (m *MachineCmd) Shutdown() error {
-	cmd := []string{"systemctl", "shutdown"}
+	cmd := []string{"systemctl", "poweroff"}
 
 	var c *exec.Cmd
 	if m.useSudo {
