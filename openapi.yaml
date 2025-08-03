@@ -1244,6 +1244,10 @@ components:
           type: string
           x-go-type-skip-optional-pointer: true
           description: The file that the ca will be written to
+        ca_chain_file:
+          type: string
+          x-go-type-skip-optional-pointer: true
+          description: The file that the full ca-chain will be written to
 
     X509ManagedCertificateList:
       type: object

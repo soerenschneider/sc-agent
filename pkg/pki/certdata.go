@@ -4,6 +4,7 @@ type CertData struct {
 	PrivateKey  []byte
 	Certificate []byte
 	CaData      []byte
+	CaChain     []byte
 	Serial      string
 	Csr         []byte
 }
@@ -18,6 +19,10 @@ func (c *CertData) HasCertificate() bool {
 
 func (c *CertData) HasCaData() bool {
 	return len(c.CaData) > 0
+}
+
+func (c *CertData) HasCaChain() bool {
+	return len(c.CaChain) > 0
 }
 
 type Signature struct {

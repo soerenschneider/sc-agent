@@ -78,6 +78,7 @@ func convertX509Certificate(cert x509.Certificate) X509CertificateData {
 
 func convertX509Storage(s x509.CertificateStorage) X509CertificateStorage {
 	return X509CertificateStorage{
+		CaChainFile: s.CaChainFile,
 		CaFile:   s.CaFile,
 		CertFile: s.CertFile,
 		KeyFile:  s.KeyFile,
