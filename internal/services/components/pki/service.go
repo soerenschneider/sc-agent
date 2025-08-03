@@ -304,10 +304,17 @@ func (s *Service) isLifetimeExceeded(cert *x509.Certificate) (bool, error) {
 func buildCertStorage(storageConf []vault.CertStorage) (*stores2.MultiKeyPairSink, error) {
 	var storageDing []*stores2.KeyPairSink
 	for _, conf := range storageConf {
-		var ca, crt, key stores2.StorageImplementation
+		var ca, caChain, crt, key stores2.StorageImplementation
 		var err error
 		if len(conf.CaFile) > 0 {
 			ca, err = storage.NewFilesystemStorageFromUri(conf.CaFile)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if len(conf.CaChainFile) > 0 {
+			caChain, err = storage.NewFilesystemStorageFromUri(conf.CaChainFile)
 			if err != nil {
 				return nil, err
 			}
@@ -327,7 +334,7 @@ func buildCertStorage(storageConf []vault.CertStorage) (*stores2.MultiKeyPairSin
 			}
 		}
 
-		sink, err := stores2.NewKeyPairSink(crt, key, ca)
+		sink, err := stores2.NewKeyPairSink(crt, key, ca, caChain)
 		if err != nil {
 			return nil, err
 		}

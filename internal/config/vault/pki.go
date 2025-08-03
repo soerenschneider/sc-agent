@@ -59,16 +59,18 @@ func (c *CertConfig) ToDomainModel() x509.ManagedCertificateConfig {
 }
 
 type CertStorage struct {
-	CaFile   string `validate:"omitempty" yaml:"ca_file"`
-	CertFile string `validate:"omitempty" yaml:"cert_file"`
-	KeyFile  string `validate:"omitempty" yaml:"key_file"`
+	CaChainFile string `validate:"omitempty" yaml:"ca_chain_file"`
+	CaFile      string `validate:"omitempty" yaml:"ca_file"`
+	CertFile    string `validate:"omitempty" yaml:"cert_file"`
+	KeyFile     string `validate:"omitempty" yaml:"key_file"`
 }
 
 func (c *CertStorage) ToDomainModel() x509.CertificateStorage {
 	return x509.CertificateStorage{
-		CaFile:   c.CaFile,
-		CertFile: c.CertFile,
-		KeyFile:  c.KeyFile,
+		CaChainFile: c.CaChainFile,
+		CaFile:      c.CaFile,
+		CertFile:    c.CertFile,
+		KeyFile:     c.KeyFile,
 	}
 }
 

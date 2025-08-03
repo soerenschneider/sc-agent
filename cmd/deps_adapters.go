@@ -5,6 +5,7 @@ import (
 
 	"github.com/soerenschneider/sc-agent/internal/config"
 	http_server "github.com/soerenschneider/sc-agent/internal/core/adapters/http"
+	"github.com/soerenschneider/sc-agent/internal/core/adapters/mqtt"
 	"github.com/soerenschneider/sc-agent/internal/core/ports"
 	"github.com/soerenschneider/sc-agent/internal/metrics"
 )
@@ -30,6 +31,15 @@ func buildApiServer(conf config.Config, services *ports.Components) (*http_serve
 	}
 
 	return http_server.New(conf.Http.Address, services, opts...)
+}
+
+func buildMqttClient(conf *config.Config, services *ports.Components) (*mqtt.Client, error) {
+	ret, err := mqtt.NewMqttClient(conf.Mqtt, services)
+	if err != nil {
+		return nil, err
+	}
+
+	return ret, nil
 }
 
 func buildMetricsServer(conf config.Config) (*metrics.MetricsServer, error) {

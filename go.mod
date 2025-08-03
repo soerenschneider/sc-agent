@@ -9,6 +9,7 @@ require (
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cloudevents/sdk-go/v2 v2.16.0
+	github.com/eclipse/paho.mqtt.golang v1.5.0
 	github.com/getkin/kin-openapi v0.132.0
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/google/uuid v1.6.0
@@ -47,6 +48,7 @@ require (
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect

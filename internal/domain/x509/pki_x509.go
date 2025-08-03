@@ -17,9 +17,10 @@ type ManagedCertificateConfig struct {
 }
 
 type CertificateStorage struct {
-	CaFile   string `validate:"omitempty" yaml:"ca_file"`
-	CertFile string `validate:"omitempty" yaml:"cert_file"`
-	KeyFile  string `validate:"omitempty" yaml:"key_file"`
+	CaChainFile string `validate:"omitempty" yaml:"ca_chain_file"`
+	CaFile      string `validate:"omitempty" yaml:"ca_file"`
+	CertFile    string `validate:"omitempty" yaml:"cert_file"`
+	KeyFile     string `validate:"omitempty" yaml:"key_file"`
 }
 
 type CertificateConfig struct {

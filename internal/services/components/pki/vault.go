@@ -85,6 +85,27 @@ func (v *VaultX509Client) Issue(ctx context.Context, req x509.CertificateConfig)
 		return nil, fmt.Errorf("could not convert 'certificate' data to string: %w", domain.ErrVaultInvalidResponse)
 	}
 
+	var caChain []string
+	caChainData, found := resp.Data["ca_chain"]
+	if found {
+		switch v := caChainData.(type) {
+		case []string:
+			caChain = v
+		case []any:
+			var result []string
+			for _, item := range v {
+				s, ok := item.(string)
+				if !ok {
+					return nil, fmt.Errorf("element %v is not a string", item)
+				}
+				result = append(result, s)
+			}
+			caChain = result
+		default:
+			return nil, fmt.Errorf("unsupported type for 'ca_chain': %T", caChainData)
+		}
+	}
+
 	caData, found := resp.Data["issuing_ca"]
 	if !found {
 		return nil, fmt.Errorf("response is missing 'issuing_ca' data: %w", domain.ErrVaultInvalidResponse)
@@ -99,6 +120,7 @@ func (v *VaultX509Client) Issue(ctx context.Context, req x509.CertificateConfig)
 		PrivateKey:  []byte(privKey),
 		Certificate: []byte(cert),
 		CaData:      []byte(ca),
+		CaChain:     []byte(strings.Join(caChain, "\n")),
 	}, nil
 }
 

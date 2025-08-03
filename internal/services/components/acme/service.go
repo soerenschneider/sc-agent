@@ -204,10 +204,17 @@ func (s *Service) autoRenew(ctx context.Context) {
 func buildCertStorage(storageConf []vault.CertStorage) (*x509_repo.MultiKeyPairSink, error) {
 	var storageDing []*x509_repo.KeyPairSink
 	for _, conf := range storageConf {
-		var ca, crt, key x509_repo.StorageImplementation
+		var ca, caChain, crt, key x509_repo.StorageImplementation
 		var err error
 		if len(conf.CaFile) > 0 {
 			ca, err = storage.NewFilesystemStorageFromUri(conf.CaFile)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if len(conf.CaChainFile) > 0 {
+			caChain, err = storage.NewFilesystemStorageFromUri(conf.CaChainFile)
 			if err != nil {
 				return nil, err
 			}
@@ -227,7 +234,7 @@ func buildCertStorage(storageConf []vault.CertStorage) (*x509_repo.MultiKeyPairS
 			}
 		}
 
-		sink, err := x509_repo.NewKeyPairSink(crt, key, ca)
+		sink, err := x509_repo.NewKeyPairSink(crt, key, ca, caChain)
 		if err != nil {
 			return nil, err
 		}
