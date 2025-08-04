@@ -13,7 +13,7 @@ require (
 	github.com/getkin/kin-openapi v0.132.0
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/go-retryablehttp v0.7.7
+	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/hashicorp/vault/api v1.20.0
 	github.com/nats-io/nats.go v1.41.2
 	github.com/oapi-codegen/oapi-codegen/v2 v2.4.1
