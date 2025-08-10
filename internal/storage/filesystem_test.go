@@ -4,16 +4,8 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"runtime"
 	"testing"
 )
-
-func getOsDependendGroup() string {
-	if runtime.GOOS == "linux" {
-		return "root"
-	}
-	return "wheel"
-}
 
 func TestNewFilesystemStorageFromUri(t *testing.T) {
 	tests := []struct {
@@ -46,11 +38,11 @@ func TestNewFilesystemStorageFromUri(t *testing.T) {
 		},
 		{
 			name: "With user and group",
-			uri:  fmt.Sprintf("file://root:%s@/home/soeren/.certs/cert.pem", getOsDependendGroup()),
+			uri:  fmt.Sprintf("file://root:%s@/home/soeren/.certs/cert.pem", getOsDependentGroup()),
 			want: &FilesystemStorage{
 				FilePath:  "/home/soeren/.certs/cert.pem",
 				FileOwner: "root",
-				FileGroup: getOsDependendGroup(),
+				FileGroup: getOsDependentGroup(),
 				Mode:      defaultFileMode,
 			},
 			wantErr: false,
