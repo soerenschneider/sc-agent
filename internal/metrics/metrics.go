@@ -36,6 +36,12 @@ var (
 		Name:      "heartbeat_timestamp_seconds",
 		Help:      "Heartbeat of sc-agent",
 	})
+
+	CertStorageErrors = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "certstorage_errors_total",
+		Help:      "Total errors of component cert-storage",
+	}, []string{"error"})
 )
 
 func init() {

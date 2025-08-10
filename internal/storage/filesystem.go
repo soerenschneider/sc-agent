@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/rs/zerolog/log"
+	"github.com/soerenschneider/sc-agent/internal/metrics"
 	"github.com/spf13/afero"
 
 	"golang.org/x/sys/unix"
@@ -106,8 +107,13 @@ func newFilesystemStorage(path, owner, group string, mode os.FileMode) (*Filesys
 	if len(owner) > 0 && len(group) > 0 {
 		localUser, err := user.Lookup(owner)
 		if err != nil {
-			return nil, fmt.Errorf("could not lookup user '%s': %v", owner, err)
+			log.Error().Str("component", "cert_storage").Str("owner", owner).Msg("could not lookup user, falling back to root")
+			metrics.CertStorageErrors.WithLabelValues("user_lookup_failed").Inc()
+			localUser = &user.User{
+				Uid: "0",
+			}
 		}
+
 		cuid, err := strconv.Atoi(localUser.Uid)
 		if err != nil {
 			return nil, fmt.Errorf("was expecting a numerical uid, got '%s'", localUser.Uid)
@@ -116,8 +122,13 @@ func newFilesystemStorage(path, owner, group string, mode os.FileMode) (*Filesys
 
 		localGroup, err := user.LookupGroup(group)
 		if err != nil {
-			return nil, fmt.Errorf("could not lookup group '%s': %v", group, err)
+			log.Error().Str("component", "cert_storage").Str("group", group).Msg("could not lookup group, falling back to root")
+			metrics.CertStorageErrors.WithLabelValues("group_lookup_failed").Inc()
+			localUser = &user.User{
+				Gid: "0",
+			}
 		}
+
 		cgid, err := strconv.Atoi(localGroup.Gid)
 		if err != nil {
 			return nil, fmt.Errorf("was expecting a numerical gid, got '%s'", localGroup.Gid)
