@@ -47,7 +47,7 @@ func (fs *MultiKeyPairSink) sanitize() error {
 	}
 
 	if len(certData) > 0 && len(certData) != len(fs.sinks) {
-		log.Warn().Str("component", "storage").Msg("not all configured files are present")
+		log.Warn().Str("component", "storage").Msg("not all configured certificate files are present")
 		return storage.ErrFilesMissing
 	}
 

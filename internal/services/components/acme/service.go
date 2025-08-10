@@ -1,6 +1,7 @@
 package acme
 
 import (
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -236,7 +237,7 @@ func buildCertStorage(storageConf []vault.CertStorage) (*x509_repo.MultiKeyPairS
 
 		sink, err := x509_repo.NewKeyPairSink(crt, key, ca, caChain)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not build acme cert storage for %s: %w", cmp.Or(conf.KeyFile, conf.CertFile, conf.CaChainFile, conf.CaFile), err)
 		}
 
 		storageDing = append(storageDing, sink)
