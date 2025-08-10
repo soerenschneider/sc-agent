@@ -8,10 +8,6 @@ import (
 	"testing"
 )
 
-func getLiteral(x int) *int {
-	return &x
-}
-
 func getOsDependendGroup() string {
 	if runtime.GOOS == "linux" {
 		return "root"
@@ -31,9 +27,9 @@ func TestNewFilesystemStorageFromUri(t *testing.T) {
 			uri:  "file:///home/soeren/.certs/cert.pem",
 			want: &FilesystemStorage{
 				FilePath:  "/home/soeren/.certs/cert.pem",
-				FileOwner: nil,
-				FileGroup: nil,
-				Mode:      defaultMode,
+				FileOwner: "root",
+				FileGroup: "root",
+				Mode:      defaultFileMode,
 			},
 			wantErr: false,
 		},
@@ -42,8 +38,8 @@ func TestNewFilesystemStorageFromUri(t *testing.T) {
 			uri:  "file:///home/soeren/.certs/cert.pem?chmod=755",
 			want: &FilesystemStorage{
 				FilePath:  "/home/soeren/.certs/cert.pem",
-				FileOwner: nil,
-				FileGroup: nil,
+				FileOwner: "root",
+				FileGroup: "root",
 				Mode:      os.FileMode(0755),
 			},
 			wantErr: false,
@@ -53,9 +49,9 @@ func TestNewFilesystemStorageFromUri(t *testing.T) {
 			uri:  fmt.Sprintf("file://root:%s@/home/soeren/.certs/cert.pem", getOsDependendGroup()),
 			want: &FilesystemStorage{
 				FilePath:  "/home/soeren/.certs/cert.pem",
-				FileOwner: getLiteral(0),
-				FileGroup: getLiteral(0),
-				Mode:      defaultMode,
+				FileOwner: "root",
+				FileGroup: getOsDependendGroup(),
+				Mode:      defaultFileMode,
 			},
 			wantErr: false,
 		},

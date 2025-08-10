@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"syscall"
@@ -14,14 +15,15 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/soerenschneider/sc-agent/internal/metrics"
 	"github.com/spf13/afero"
+	"go.uber.org/multierr"
 
 	"golang.org/x/sys/unix"
 )
 
 type FilesystemStorage struct {
 	FilePath  string
-	FileOwner *int
-	FileGroup *int
+	FileOwner string
+	FileGroup string
 	Mode      os.FileMode
 	fs        afero.Fs
 }
@@ -31,7 +33,10 @@ const (
 	ParamChmod = "chmod"
 )
 
-var defaultMode os.FileMode = 0600
+var (
+	defaultFileMode os.FileMode = 0600
+	defaultDirMode  os.FileMode = 0750
+)
 
 func NewFilesystemStorageFromUri(uri string) (*FilesystemStorage, error) {
 	parsed, err := url.Parse(uri)
@@ -44,19 +49,19 @@ func NewFilesystemStorageFromUri(uri string) (*FilesystemStorage, error) {
 		return nil, err
 	}
 
-	var username, pass string
+	var username, group string
 	userData := parsed.User
 	if userData != nil {
 		username = userData.Username()
 
 		var ok bool
-		pass, ok = userData.Password()
+		group, ok = userData.Password()
 		if !ok {
-			pass = ""
+			group = ""
 		}
 	}
 
-	mode := defaultMode
+	mode := defaultFileMode
 	params, err := url.ParseQuery(parsed.RawQuery)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse queries")
@@ -75,54 +80,61 @@ func NewFilesystemStorageFromUri(uri string) (*FilesystemStorage, error) {
 		}
 	}
 
-	return newFilesystemStorage(path, username, pass, mode)
-}
-
-func newFilesystemStorage(path, owner, group string, mode os.FileMode) (*FilesystemStorage, error) {
 	if len(path) == 0 {
 		return nil, errors.New("empty path provided")
 	}
 
-	var uid, gid *int
-	if len(owner) > 0 && len(group) > 0 {
-		localUser, err := user.Lookup(owner)
-		if err != nil {
-			log.Error().Str("component", "cert_storage").Str("owner", owner).Msg("could not lookup user, falling back to root")
-			metrics.CertStorageErrors.WithLabelValues("user_lookup_failed").Inc()
-			localUser = &user.User{
-				Uid: "0",
-			}
-		}
-
-		cuid, err := strconv.Atoi(localUser.Uid)
-		if err != nil {
-			return nil, fmt.Errorf("was expecting a numerical uid, got '%s'", localUser.Uid)
-		}
-		uid = &cuid
-
-		localGroup, err := user.LookupGroup(group)
-		if err != nil {
-			log.Error().Str("component", "cert_storage").Str("group", group).Msg("could not lookup group, falling back to root")
-			metrics.CertStorageErrors.WithLabelValues("group_lookup_failed").Inc()
-			localUser = &user.User{
-				Gid: "0",
-			}
-		}
-
-		cgid, err := strconv.Atoi(localGroup.Gid)
-		if err != nil {
-			return nil, fmt.Errorf("was expecting a numerical gid, got '%s'", localGroup.Gid)
-		}
-		gid = &cgid
-	}
-
 	return &FilesystemStorage{
 		FilePath:  path,
-		FileOwner: uid,
-		FileGroup: gid,
+		FileOwner: cmp.Or(username, "root"),
+		FileGroup: cmp.Or(group, "root"),
 		Mode:      mode,
 		fs:        afero.NewOsFs(),
 	}, nil
+}
+
+func resolveUidAndGid(owner, group string) (int, int, error) {
+	var errs error
+
+	uid, err := resolveUid(owner)
+	multierr.Append(errs, err)
+
+	gid, err := resolveUid(group)
+	multierr.Append(errs, err)
+
+	return uid, gid, errs
+}
+
+func resolveUid(owner string) (int, error) {
+	localUser, err := user.Lookup(owner)
+	if err != nil {
+		log.Error().Str("component", "cert_storage").Str("owner", owner).Msg("could not lookup user, falling back to root")
+		metrics.CertStorageErrors.WithLabelValues("user_lookup_failed").Inc()
+		return 0, nil
+	}
+
+	cuid, err := strconv.Atoi(localUser.Uid)
+	if err != nil {
+		return -1, fmt.Errorf("was expecting a numerical uid, got '%s'", localUser.Uid)
+	}
+
+	return cuid, nil
+}
+
+func resolveGid(group string) (int, error) {
+	localGroup, err := user.LookupGroup(group)
+	if err != nil {
+		log.Error().Str("component", "cert_storage").Str("group", group).Msg("could not lookup group, falling back to root")
+		metrics.CertStorageErrors.WithLabelValues("group_lookup_failed").Inc()
+		return 0, nil
+	}
+
+	cgid, err := strconv.Atoi(localGroup.Gid)
+	if err != nil {
+		return -1, fmt.Errorf("was expecting a numerical gid, got '%s'", localGroup.Gid)
+	}
+
+	return cgid, nil
 }
 
 func (fs *FilesystemStorage) Read() ([]byte, error) {
@@ -167,10 +179,11 @@ func (fs *FilesystemStorage) Write(signedData []byte) error {
 				}
 
 				// Set ownership on newly created directories if specified
-				if fs.FileOwner != nil && fs.FileGroup != nil {
-					err = fs.chownDirectoryRecursive(dir, *fs.FileOwner, *fs.FileGroup)
-					if err != nil {
+				uid, gid, err := resolveUidAndGid(fs.FileOwner, fs.FileGroup)
+				if err == nil {
+					if err := fs.chownDirectoryRecursive(dir, uid, gid); err != nil {
 						return fmt.Errorf("could not set ownership on directories for '%s': %v", fs.FilePath, err)
+
 					}
 				}
 			} else {
@@ -186,8 +199,9 @@ func (fs *FilesystemStorage) Write(signedData []byte) error {
 		return fmt.Errorf("could not write file '%s' to disk: %v", fs.FilePath, err)
 	}
 
-	if fs.FileOwner != nil && fs.FileGroup != nil {
-		err = fs.fs.Chown(fs.FilePath, *fs.FileOwner, *fs.FileGroup)
+	uid, gid, err := resolveUidAndGid(fs.FileOwner, fs.FileGroup)
+	if err == nil {
+		err = fs.fs.Chown(fs.FilePath, uid, gid)
 		if err != nil {
 			return fmt.Errorf("could not chown file '%s': %v", fs.FilePath, err)
 		}
@@ -270,11 +284,6 @@ func (fs *FilesystemStorage) checkAndFixFileState() error {
 		}
 	}
 
-	// Check ownership if specified
-	if fs.FileOwner == nil && fs.FileGroup == nil {
-		return nil
-	}
-
 	// For afero, we need to check if it's an OS filesystem to get detailed stat info
 	if osFs, ok := fs.fs.(*afero.OsFs); ok {
 		stat, err := osFs.Stat(fs.FilePath)
@@ -282,12 +291,15 @@ func (fs *FilesystemStorage) checkAndFixFileState() error {
 			return fmt.Errorf("could not get detailed stat for file '%s': %v", fs.FilePath, err)
 		}
 
+		desiredUID, desiredGID, err := resolveUidAndGid(fs.FileOwner, fs.FileGroup)
+		if err != nil {
+			return fmt.Errorf("could not resolve uid and gid for file '%s': %v", fs.FilePath, err)
+		}
+
 		// Get system-specific stat info
 		if sysStat, ok := stat.Sys().(*syscall.Stat_t); ok {
 			currentUID := int(sysStat.Uid)
 			currentGID := int(sysStat.Gid)
-			desiredUID := *fs.FileOwner
-			desiredGID := *fs.FileGroup
 
 			if currentUID != desiredUID || currentGID != desiredGID {
 				log.Info().Str("component", "cert_storage").Str("file", fs.FilePath).Int("current_uid", currentUID).Int("current_gid", currentGID).Int("desired_uid", desiredUID).Int("desired_gid", desiredGID).Msg("file ownership mismatch detected")
@@ -299,7 +311,7 @@ func (fs *FilesystemStorage) checkAndFixFileState() error {
 		} else {
 			// Fallback: always try to set ownership if we can't determine current values
 			log.Info().Str("component", "cert_storage").Str("file", fs.FilePath).Msg("unable to determine current ownership, setting desired ownership")
-			if err := fs.fs.Chown(fs.FilePath, *fs.FileOwner, *fs.FileGroup); err != nil {
+			if err := fs.fs.Chown(fs.FilePath, desiredUID, desiredGID); err != nil {
 				return fmt.Errorf("could not chown file '%s': %v", fs.FilePath, err)
 			}
 
@@ -309,7 +321,7 @@ func (fs *FilesystemStorage) checkAndFixFileState() error {
 		// For non-OS filesystems (like memory fs), we might not be able to check ownership
 		// but we can still try to set it if the filesystem supports it
 		log.Info().Str("component", "cert_storage").Str("file", fs.FilePath).Msg("non-OS filesystem detected, attempting to set ownership")
-		if err := fs.fs.Chown(fs.FilePath, *fs.FileOwner, *fs.FileGroup); err != nil {
+		if err := fs.fs.Chown(fs.FilePath, desiredUID, desiredGID); err != nil {
 			// Don't return error for non-OS filesystems as they might not support ownership
 			log.Warn().Err(err).Str("component", "cert_storage").Str("file", fs.FilePath).Msg("could not set ownership on non-OS filesystem")
 		}
