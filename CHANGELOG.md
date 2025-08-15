@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.13.0](https://github.com/soerenschneider/sc-agent/compare/v1.12.0...v1.13.0) (2025-08-10)
+
+
+### Features
+
+* dynamically resolve uids and gids ([c158e61](https://github.com/soerenschneider/sc-agent/commit/c158e6163efea0676a5a3367aa2e28128597a48e))
+* if user / group can not be found, map to user root ([32d0466](https://github.com/soerenschneider/sc-agent/commit/32d04664c4e3dbd80733760c5661729822e88020))
+* use controller-like loop to fix incorrect owner and permissions on configured files ([4fd193e](https://github.com/soerenschneider/sc-agent/commit/4fd193ec7c497966286f2db489f821d6d1cb90e4))
+
 ## [1.12.0](https://github.com/soerenschneider/sc-agent/compare/v1.11.0...v1.12.0) (2025-08-04)
 
 
