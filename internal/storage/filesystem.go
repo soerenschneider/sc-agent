@@ -263,10 +263,10 @@ func resolveUidAndGid(owner, group string) (int, int, error) {
 	var errs error
 
 	uid, err := resolveUid(owner)
-	multierr.Append(errs, err)
+	errs = multierr.Append(errs, err)
 
 	gid, err := resolveGid(group)
-	multierr.Append(errs, err)
+	errs = multierr.Append(errs, err)
 
 	return uid, gid, errs
 }
