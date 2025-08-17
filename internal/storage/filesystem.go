@@ -237,17 +237,16 @@ func (fss *FilesystemStorage) checkAndFixFileState() error {
 					return fmt.Errorf("could not chown file '%s': %v", fss.FilePath, err)
 				}
 			}
-			return nil
 		} else {
 			// Fallback: always try to set ownership if we can't determine current values
 			log.Info().Str("component", "cert_storage").Str("file", fss.FilePath).Msg("unable to determine current ownership, setting desired ownership")
 			if err := fss.fs.Chown(fss.FilePath, wantedUid, wantedGid); err != nil {
 				return fmt.Errorf("could not chown file '%s': %v", fss.FilePath, err)
 			}
-
-			return nil
 		}
 
+		return nil
+	} else {
 		// For non-OS filesystems (like memory fs), we might not be able to check ownership
 		// but we can still try to set it if the filesystem supports it
 		log.Info().Str("component", "cert_storage").Str("file", fss.FilePath).Msg("non-OS filesystem detected, attempting to set ownership")
