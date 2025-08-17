@@ -38,7 +38,7 @@ func (conf *SecretsReplication) UnmarshalYAML(node *yaml.Node) error {
 
 type VaultReplicationItem struct {
 	SecretPath    string         `yaml:"secret_path" validate:"required"`
-	Formatter     string         `yaml:"formatter" validate:"required,oneof=yaml json env"`
+	Formatter     string         `yaml:"formatter" validate:"required,oneof=yaml json env template"`
 	FormatterArgs map[string]any `yaml:"formatter_args"`
 	DestUri       string         `yaml:"dest" validate:"required"`
 }

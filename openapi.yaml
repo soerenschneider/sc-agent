@@ -1018,6 +1018,11 @@ components:
           example: "json"
           x-go-type-skip-optional-pointer: true
           description: name of the formatter
+          enum:
+            - env
+            - json
+            - template
+            - yaml
         dest_uri:
           type: string
           example: "/tmp/db.json"

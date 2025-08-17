@@ -3,6 +3,7 @@ package vault
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/soerenschneider/sc-agent/internal/config/vault"
 	domain "github.com/soerenschneider/sc-agent/internal/domain/secret_replication"
@@ -13,6 +14,8 @@ import (
 
 const (
 	vaultSecretSyncerFormatterYamlKey                = "yaml"
+	vaultSecretSyncerFormatterTemplateKey            = "template"
+	vaultSecretSyncerFormatterTemplateOptionFile     = "file"
 	vaultSecretSyncerFormatterJsonKey                = "json"
 	vaultSecretSyncerFormatterEnvKey                 = "env"
 	vaultSecretSyncerFormatterEnvOptionUppercaseKeys = "uppercase_keys"
@@ -81,6 +84,26 @@ func buildSyncSecretRequests(conf vault.SecretsReplication) ([]domain.Replicatio
 
 func buildSecretFormatter(name string, arguments map[string]any) (Formatter, error) {
 	switch name {
+	case vaultSecretSyncerFormatterTemplateKey:
+		if arguments == nil {
+			return nil, errors.New("no arguments provided")
+		}
+
+		var templateData string
+
+		val, found := arguments[vaultSecretSyncerFormatterTemplateOptionFile]
+		if !found {
+			return nil, errors.New("no 'file' argument provided")
+		}
+
+		templateFile, _ := val.(string)
+		var err error
+		templateData, err = os.Readlink(templateFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not read template file %q: %w", templateFile, err)
+		}
+
+		return formatter.NewTemplateFormatter(templateData)
 	case vaultSecretSyncerFormatterEnvKey:
 		uppercaseKeys := false
 		if arguments != nil {
