@@ -55,12 +55,12 @@ func buildSyncSecretRequests(conf vault.SecretsReplication) ([]domain.Replicatio
 	for id, req := range conf.ReplicationRequests {
 		formatter, err := buildSecretFormatter(req.Formatter, req.FormatterArgs)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not build formatter for %q: %w", req.Formatter, err)
 		}
 
 		storageImpl, err := storage.NewFilesystemStorageFromUri(req.DestUri)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not build storage for %q: %w", req.DestUri, err)
 		}
 
 		request := domain.ReplicationItem{
