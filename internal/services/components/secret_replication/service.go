@@ -170,7 +170,7 @@ func (s *Service) updateFile(data []byte, conf secret_replication.ReplicationIte
 	hash := hashContent(data)
 
 	oldHash, itemAlreadyCached := s.cache[conf.ReplicationConf.Id]
-	log.Info().Str(logComponent, componentName).Str("hash", hash).Str("oldHash", oldHash).Bool("itemDownloaded", itemAlreadyCached).Msg("Cache check #1")
+	log.Info().Str(logComponent, componentName).Str("hash", hash).Str("oldHash", oldHash).Bool("item_in_cache", itemAlreadyCached).Msg("Cache check #1")
 	if itemAlreadyCached && oldHash == hash {
 		// item is already downloaded. let's check if the item on disk has been changed by a 3rd party since our last check.
 		diskContent, err := conf.Destination.Read()
