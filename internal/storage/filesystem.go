@@ -206,11 +206,17 @@ func (fss *FilesystemStorage) checkAndFixFileState() error {
 
 	currentMode := fileInfo.Mode().Perm()
 	wantedMode := fss.Mode
+	log.Debug().Str("file", fss.FilePath).Any("wanted", wantedMode).Any("current", currentMode).Msg("Checking file mode for differences")
 	if currentMode != wantedMode {
 		log.Info().Str("component", "cert_storage").Str("file", fss.FilePath).Str("current_mode", fmt.Sprintf("%o", currentMode)).Str("desired_mode", fmt.Sprintf("%o", wantedMode)).Msg("file mode mismatch detected")
 		if err := fss.fs.Chmod(fss.FilePath, wantedMode); err != nil {
 			return fmt.Errorf("could not chmod file '%s': %v", fss.FilePath, err)
 		}
+	}
+
+	wantedUid, wantedGid, err := resolveUidAndGid(fss.FileOwner, fss.FileGroup)
+	if err != nil {
+		return fmt.Errorf("could not resolve uid and gid for file '%s': %v", fss.FilePath, err)
 	}
 
 	// For afero, we need to check if it's an OS filesystem to get detailed stat info
@@ -220,16 +226,11 @@ func (fss *FilesystemStorage) checkAndFixFileState() error {
 			return fmt.Errorf("could not get detailed stat for file '%s': %v", fss.FilePath, err)
 		}
 
-		wantedUid, wantedGid, err := resolveUidAndGid(fss.FileOwner, fss.FileGroup)
-		if err != nil {
-			return fmt.Errorf("could not resolve uid and gid for file '%s': %v", fss.FilePath, err)
-		}
-
 		// Get system-specific stat info
 		if sysStat, ok := stat.Sys().(*syscall.Stat_t); ok {
 			currentUid := int(sysStat.Uid)
 			currentGid := int(sysStat.Gid)
-
+			log.Debug().Str("file", fss.FilePath).Any("wanted", currentGid).Any("current", currentUid).Msg("Checking file owner for differences")
 			if currentUid != wantedUid || currentGid != wantedGid {
 				log.Info().Str("component", "cert_storage").Str("file", fss.FilePath).Int("current_uid", currentUid).Int("current_gid", currentGid).Int("wanted_uid", wantedUid).Int("desired_gid", wantedGid).Msg("file ownership mismatch detected")
 				if err := fss.fs.Chown(fss.FilePath, wantedUid, wantedGid); err != nil {
