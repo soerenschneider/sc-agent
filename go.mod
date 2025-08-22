@@ -24,7 +24,7 @@ require (
 	github.com/prometheus/common v0.65.0
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/rs/zerolog v1.34.0
-	github.com/segmentio/kafka-go v0.4.47
+	github.com/segmentio/kafka-go v0.4.49
 	github.com/soerenschneider/soeren.cloud-events v0.0.0-20250423164936-f1e30077892f
 	github.com/spf13/afero v1.14.0
 	github.com/zcalusic/sysinfo v1.1.3
