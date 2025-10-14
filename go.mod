@@ -2,7 +2,7 @@ module github.com/soerenschneider/sc-agent
 
 go 1.24
 
-toolchain go1.24.5
+toolchain go1.25.3
 
 require (
 	github.com/adrianbrad/queue v1.4.0
