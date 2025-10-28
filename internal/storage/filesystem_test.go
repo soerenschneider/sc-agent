@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"fmt"
 	"os"
 	"os/user"
 	"reflect"
@@ -58,7 +57,7 @@ func TestNewFilesystemStorageFromUri(t *testing.T) {
 		},
 		{
 			name: "Only user",
-			uri:  fmt.Sprintf("file://myuser@/home/soeren/.certs/cert.pem"),
+			uri:  "file://myuser@/home/soeren/.certs/cert.pem",
 			want: &FilesystemStorage{
 				FilePath:  "/home/soeren/.certs/cert.pem",
 				FileOwner: "myuser",

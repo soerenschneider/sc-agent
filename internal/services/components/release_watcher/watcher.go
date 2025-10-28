@@ -100,7 +100,9 @@ func GetLatestRelease(ctx context.Context, client Client, owner, repo string) (s
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("failed to fetch latest release: %s", resp.Status)
