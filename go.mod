@@ -26,7 +26,7 @@ require (
 	github.com/rs/zerolog v1.34.0
 	github.com/segmentio/kafka-go v0.4.49
 	github.com/soerenschneider/soeren.cloud-events v0.0.0-20250423164936-f1e30077892f
-	github.com/spf13/afero v1.14.0
+	github.com/spf13/afero v1.15.0
 	github.com/zcalusic/sysinfo v1.1.3
 	gitlab.com/tanna.dev/openapi-doc-http-handler v0.2.0
 	go.uber.org/multierr v1.11.0
