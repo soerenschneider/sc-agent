@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 )
 
 type AppRoleAuth struct {
@@ -130,6 +131,7 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 
 	// if the caller indicated that the value was actually a wrapping token, unwrap it first
 	if a.unwrap {
+		log.Info().Str("subcomponent", "auth-approle").Str("component", "vault").Msg("attempting to unwrap secret ID")
 		unwrappedToken, err := client.Logical().UnwrapWithContext(ctx, secretIDValue)
 		if err != nil {
 			var respErr *api.ResponseError
@@ -143,7 +145,11 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 		}
 		// unwrap successful, do not try to unwrap a 2nd time
 		a.unwrap = false
-		loginData["secret_id"] = unwrappedToken.Data["secret_id"]
+		var ok bool
+		loginData["secret_id"], ok = unwrappedToken.Data["secret_id"]
+		if !ok {
+			return nil, fmt.Errorf("unable to unwrap response wrapping token: secret_id not found in response")
+		}
 	} else {
 		loginData["secret_id"] = secretIDValue
 	}
