@@ -70,7 +70,7 @@ func (t *TokenRenewer) StartTokenRenewal(ctx context.Context, wg *sync.WaitGroup
 			tokenErr := manageTokenLifecycle(ctx, t.client, vaultLoginResp, t.clientName)
 			if tokenErr != nil {
 				metrics.VaultTokenRenewErrors.WithLabelValues(t.clientName).Inc()
-				log.Error().Str(logComponent, vaultTokenRenewerComponent).Err(err).Msgf("unable to start managing token lifecycle")
+				log.Error().Str(logComponent, "vault").Str(logSubComponent, vaultTokenRenewerComponent).Err(err).Msgf("unable to start managing token lifecycle")
 			} else {
 				metrics.VaultTokenRenewals.WithLabelValues(t.clientName).Inc()
 			}
@@ -108,17 +108,17 @@ func manageTokenLifecycle(ctx context.Context, client *vault.Client, token *vaul
 		// needs to attempt to log in again.
 		case err := <-watcher.DoneCh():
 			if err != nil {
-				log.Error().Str(logComponent, vaultTokenRenewerComponent).Err(err).Msg("Failed to renew token, re-attempting login.")
+				log.Error().Str(logComponent, "vault").Str(logSubComponent, vaultTokenRenewerComponent).Err(err).Msg("Failed to renew token, re-attempting login.")
 				return nil
 			}
 			// This occurs once the token has reached max TTL.
-			log.Warn().Str(logComponent, vaultTokenRenewerComponent).Msg("Token can no longer be renewed. Re-attempting login.")
+			log.Warn().Str(logComponent, "vault").Str(logSubComponent, vaultTokenRenewerComponent).Msg("Token can no longer be renewed. Re-attempting login.")
 			return nil
 
 		// Successfully completed renewal
 		case renewal := <-watcher.RenewCh():
 			metrics.TokenTtl.WithLabelValues(clientName).Set(float64(renewal.Secret.Auth.LeaseDuration))
-			log.Info().Str(logComponent, vaultTokenRenewerComponent).Int("token_ttl", renewal.Secret.Auth.LeaseDuration).Msgf("Successfully renewed token")
+			log.Info().Str(logComponent, "vault").Str(logSubComponent, vaultTokenRenewerComponent).Int("token_ttl", renewal.Secret.Auth.LeaseDuration).Msgf("Successfully renewed token")
 		}
 	}
 }

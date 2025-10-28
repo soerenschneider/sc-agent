@@ -50,7 +50,7 @@ func NewFilesystemStorageFromUri(uri string) (*FilesystemStorage, error) {
 		return nil, err
 	}
 
-	var username, group string = "root", getOsDependentGroup()
+	var username, group = "root", getOsDependentGroup()
 	userData := parsed.User
 	if userData != nil {
 		username = userData.Username()
