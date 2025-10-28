@@ -102,7 +102,7 @@ func (a *ApproleSecretIdRotatorService) ConditionallyRotateSecretId(cnf vault_co
 		return err
 	}
 
-	isWrapped, _ := vault.IsWrappedToken(cnf.SecretIdFile)
+	isWrapped := vault.IsWrappedToken(secretId)
 	if isWrapped {
 		log.Warn().Str(logComponent, approleComponentName).Str(logSecretIdFile, cnf.SecretIdFile).Str("id", a.approleIdentifier).Msg("Detected a wrapped secret_id, trying to rotate immediately")
 	} else {
