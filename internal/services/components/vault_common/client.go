@@ -46,7 +46,7 @@ func (v *VaultCommon) Auth() api.AuthMethod {
 
 func (v *VaultCommon) StartTokenRenewer(ctx context.Context, wg *sync.WaitGroup, vaultFatalError chan error) {
 	if v.tokenRenewer == nil {
-		log.Warn().Str("name", v.name).Msg("Token renewal not enabled on this client")
+		log.Warn().Str(logComponent, "vault").Str("name", v.name).Msg("Token renewal not enabled on this client")
 		return
 	}
 
@@ -55,7 +55,7 @@ func (v *VaultCommon) StartTokenRenewer(ctx context.Context, wg *sync.WaitGroup,
 
 func (v *VaultCommon) StartApproleSecretIdRotation(ctx context.Context) {
 	if v.approleSecretIdRotator == nil {
-		log.Warn().Str("name", v.name).Msg("ApproleSecretIdRotation not enabled on this client")
+		log.Warn().Str(logComponent, "vault").Str("name", v.name).Msg("ApproleSecretIdRotation not enabled on this client")
 		return
 	}
 
