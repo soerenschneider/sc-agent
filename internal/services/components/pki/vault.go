@@ -163,6 +163,9 @@ func (c *VaultX509Client) readRaw(ctx context.Context, path string) ([]byte, err
 		return nil, err
 	}
 
-	defer secret.Body.Close()
+	defer func() {
+		_ = secret.Body.Close()
+	}()
+
 	return io.ReadAll(secret.Body)
 }
