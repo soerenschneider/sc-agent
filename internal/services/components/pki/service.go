@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"cmp"
 	"context"
 	"crypto/x509"
 	"encoding/pem"
@@ -15,7 +16,7 @@ import (
 	"github.com/soerenschneider/sc-agent/internal/config/vault"
 	domain "github.com/soerenschneider/sc-agent/internal/domain/x509"
 	"github.com/soerenschneider/sc-agent/internal/metrics"
-	stores2 "github.com/soerenschneider/sc-agent/internal/services/components/pki/x509_repo"
+	x509_storage "github.com/soerenschneider/sc-agent/internal/services/components/pki/x509_repo"
 	"github.com/soerenschneider/sc-agent/internal/storage"
 	"github.com/soerenschneider/sc-agent/pkg"
 	"github.com/soerenschneider/sc-agent/pkg/pki"
@@ -301,10 +302,10 @@ func (s *Service) isLifetimeExceeded(cert *x509.Certificate) (bool, error) {
 	return percentage <= s.minPercentageThreshold, nil
 }
 
-func buildCertStorage(storageConf []vault.CertStorage) (*stores2.MultiKeyPairSink, error) {
-	var storageDing []*stores2.KeyPairSink
+func buildCertStorage(storageConf []vault.CertStorage) (*x509_storage.MultiKeyPairSink, error) {
+	var storageDing []*x509_storage.KeyPairSink
 	for _, conf := range storageConf {
-		var ca, caChain, crt, key stores2.StorageImplementation
+		var ca, caChain, crt, key x509_storage.StorageImplementation
 		var err error
 		if len(conf.CaFile) > 0 {
 			ca, err = storage.NewFilesystemStorageFromUri(conf.CaFile)
@@ -334,13 +335,13 @@ func buildCertStorage(storageConf []vault.CertStorage) (*stores2.MultiKeyPairSin
 			}
 		}
 
-		sink, err := stores2.NewKeyPairSink(crt, key, ca, caChain)
+		sink, err := x509_storage.NewKeyPairSink(crt, key, ca, caChain)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not build pki cert storage for %s: %w", cmp.Or(conf.KeyFile, conf.CertFile, conf.CaChainFile, conf.CaFile), err)
 		}
 
 		storageDing = append(storageDing, sink)
 	}
 
-	return stores2.NewMultiKeyPairSink(storageDing...)
+	return x509_storage.NewMultiKeyPairSink(storageDing...)
 }

@@ -1,22 +1,18 @@
 package storage
 
 import (
-	"fmt"
 	"os"
+	"os/user"
 	"reflect"
-	"runtime"
 	"testing"
 )
 
-func getLiteral(x int) *int {
-	return &x
-}
-
-func getOsDependendGroup() string {
-	if runtime.GOOS == "linux" {
-		return "root"
+func getCurrentUsername() string {
+	u, err := user.Current()
+	if err == nil {
+		return u.Username
 	}
-	return "wheel"
+	return ""
 }
 
 func TestNewFilesystemStorageFromUri(t *testing.T) {
@@ -31,9 +27,9 @@ func TestNewFilesystemStorageFromUri(t *testing.T) {
 			uri:  "file:///home/soeren/.certs/cert.pem",
 			want: &FilesystemStorage{
 				FilePath:  "/home/soeren/.certs/cert.pem",
-				FileOwner: nil,
-				FileGroup: nil,
-				Mode:      defaultMode,
+				FileOwner: getCurrentUsername(),
+				FileGroup: getOsDependentGroup(),
+				Mode:      defaultFileMode,
 			},
 			wantErr: false,
 		},
@@ -42,20 +38,31 @@ func TestNewFilesystemStorageFromUri(t *testing.T) {
 			uri:  "file:///home/soeren/.certs/cert.pem?chmod=755",
 			want: &FilesystemStorage{
 				FilePath:  "/home/soeren/.certs/cert.pem",
-				FileOwner: nil,
-				FileGroup: nil,
+				FileOwner: getCurrentUsername(),
+				FileGroup: getOsDependentGroup(),
 				Mode:      os.FileMode(0755),
 			},
 			wantErr: false,
 		},
 		{
 			name: "With user and group",
-			uri:  fmt.Sprintf("file://root:%s@/home/soeren/.certs/cert.pem", getOsDependendGroup()),
+			uri:  "file://root:groupname@/home/soeren/.certs/cert.pem",
 			want: &FilesystemStorage{
 				FilePath:  "/home/soeren/.certs/cert.pem",
-				FileOwner: getLiteral(0),
-				FileGroup: getLiteral(0),
-				Mode:      defaultMode,
+				FileOwner: "root",
+				FileGroup: "groupname",
+				Mode:      defaultFileMode,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Only user",
+			uri:  "file://myuser@/home/soeren/.certs/cert.pem",
+			want: &FilesystemStorage{
+				FilePath:  "/home/soeren/.certs/cert.pem",
+				FileOwner: "myuser",
+				FileGroup: getOsDependentGroup(),
+				Mode:      defaultFileMode,
 			},
 			wantErr: false,
 		},

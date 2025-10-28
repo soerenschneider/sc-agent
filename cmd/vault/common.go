@@ -148,7 +148,7 @@ func buildVaultAuth(conf vault_config.Vault) (vault.AuthMethod, error) {
 			loginOpts = append(loginOpts, auth.WithMountPath(conf.MountApprole))
 		}
 
-		isWrappedToken, err := pkg_vault.IsWrappedToken(conf.SecretIdFile)
+		isWrappedToken, err := pkg_vault.ContainsFileWrappedToken(conf.SecretIdFile)
 		if err != nil {
 			return nil, err
 		}

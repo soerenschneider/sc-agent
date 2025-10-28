@@ -45,7 +45,9 @@ func (r *DynamicCidrResolver) GetCidr() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	localAddr := conn.LocalAddr().(*net.TCPAddr)
 
