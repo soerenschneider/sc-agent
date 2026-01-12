@@ -143,7 +143,7 @@ func (fss *FilesystemStorage) Write(signedData []byte) error {
 	dir := filepath.Dir(fss.FilePath)
 	if dir != "" && dir != "." && dir != "/" {
 		// Check if directory already exists
-		if _, err := fss.fs.Stat(dir); errors.Is(err, fs.ErrNotExist) {
+		if _, err := fss.fs.Stat(dir); err != nil && errors.Is(err, fs.ErrNotExist) {
 			log.Warn().Str("component", "cert_storage").Str("file", fss.FilePath).Msg("directory base path does not exist, creating it")
 			// Directory doesn't exist, create it
 			if err := fss.fs.MkdirAll(dir, defaultDirMode); err != nil {
@@ -154,7 +154,7 @@ func (fss *FilesystemStorage) Write(signedData []byte) error {
 			if err := fss.fs.Chown(dir, uid, gid); err != nil {
 				return fmt.Errorf("could not chown directory '%s': %v", dir, err)
 			}
-		} else {
+		} else if err != nil {
 			// Some other error occurred during stat
 			return fmt.Errorf("could not check directory '%s': %v", dir, err)
 		}
