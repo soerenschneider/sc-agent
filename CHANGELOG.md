@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.13.1](https://github.com/soerenschneider/sc-agent/compare/v1.13.0...v1.13.1) (2026-01-26)
+
+
+### Bug Fixes
+
+* fix error check ([e90d0da](https://github.com/soerenschneider/sc-agent/commit/e90d0dadd94caf0cca2d7a7c4aec9501bc70a4c6))
+* fix potential data race ([a6c70c9](https://github.com/soerenschneider/sc-agent/commit/a6c70c96f423e1014b0575b5be8a8d81274dc538))
+
 ## [1.13.0](https://github.com/soerenschneider/sc-agent/compare/v1.12.0...v1.13.0) (2025-10-28)
 
 
