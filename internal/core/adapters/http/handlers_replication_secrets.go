@@ -31,7 +31,7 @@ func (s *HttpServer) ReplicationPostSecretsRequests(ctx context.Context, request
 		return ReplicationPostSecretsRequests501ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	syncSecretRequest, err := s.services.SecretsReplication.GetReplicationItem(request.Params.SecretPath)
+	syncSecretRequest, err := s.services.SecretsReplication.GetReplicationItem(request.Params.Id)
 	if err != nil {
 		if errors.Is(err, secret_replication.ErrSecretsReplicationItemNotFound) {
 			return ReplicationPostSecretsRequests404ApplicationProblemPlusJSONResponse{}, nil

@@ -642,17 +642,17 @@ paths:
       operationId: replicationPostSecretsRequests
       summary: Replicate a secret from Vault
       description: >
-        Replicates a predefined secret from Vault to the local filesystem. The secret config is defined by the secret path which is expected as query parameter.
+        Replicates a predefined secret from Vault to the local filesystem. The secret to sync is defined by the secret id which is expected as query parameter.
       tags:
         - secrets
       parameters:
-        - name: secret-path
+        - name: id
           in: query
           required: true
           schema:
             type: string
-          example: "prod/database"
-          description: The KV2 path of the secret that you want to trigger the sync for
+          example: "gh-token"
+          description: The id of the secret that you want to trigger the sync for
       responses:
         '200':
           description: "Successfully synced secret"

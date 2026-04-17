@@ -52,7 +52,7 @@ func NewService(client ReplicationClient, syncItems []secret_replication.Replica
 	// convert to map
 	syncItemsMap := map[string]secret_replication.ReplicationItem{}
 	for _, req := range syncItems {
-		syncItemsMap[req.ReplicationConf.SecretPath] = req
+		syncItemsMap[req.ReplicationConf.Id] = req
 	}
 
 	ret := &Service{
@@ -169,7 +169,7 @@ func (s *Service) Replicate(ctx context.Context, item secret_replication.Replica
 func (s *Service) updateFile(data []byte, conf secret_replication.ReplicationItem) error {
 	hash := hashContent(data)
 
-	oldHash, itemAlreadyCached := s.cache[conf.ReplicationConf.Id]
+	oldHash, itemAlreadyCached := s.cache[conf.ReplicationConf.SecretPath]
 	log.Info().Str(logComponent, componentName).Str("hash", hash).Str("oldHash", oldHash).Bool("item_in_cache", itemAlreadyCached).Msg("Cache check #1")
 	if itemAlreadyCached && oldHash == hash {
 		// item is already downloaded. let's check if the item on disk has been changed by a 3rd party since our last check.
@@ -187,7 +187,7 @@ func (s *Service) updateFile(data []byte, conf secret_replication.ReplicationIte
 		}
 	}
 
-	s.cache[conf.ReplicationConf.Id] = hash
+	s.cache[conf.ReplicationConf.SecretPath] = hash
 
 	if !itemAlreadyCached {
 		read, err := conf.Destination.Read()
@@ -199,7 +199,7 @@ func (s *Service) updateFile(data []byte, conf secret_replication.ReplicationIte
 
 	log.Info().Str(logComponent, componentName).Str("id", conf.ReplicationConf.Id).Msg("writing item to disk")
 	if err := conf.Destination.Write(data); err != nil {
-		metrics.SecretsRead.WithLabelValues(conf.ReplicationConf.Id, "write_file").Inc()
+		metrics.SecretReplicationErrors.WithLabelValues(conf.ReplicationConf.Id, "write_file").Inc()
 		return err
 	}
 
