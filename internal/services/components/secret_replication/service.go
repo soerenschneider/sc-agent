@@ -170,13 +170,13 @@ func (s *Service) updateFile(data []byte, conf secret_replication.ReplicationIte
 	hash := hashContent(data)
 
 	oldHash, itemAlreadyCached := s.cache[conf.ReplicationConf.SecretPath]
-	log.Info().Str(logComponent, componentName).Str("hash", hash).Str("oldHash", oldHash).Bool("item_in_cache", itemAlreadyCached).Msg("Cache check #1")
+	log.Debug().Str(logComponent, componentName).Str("hash", hash).Str("oldHash", oldHash).Bool("item_in_cache", itemAlreadyCached).Msg("Cache check #1")
 	if itemAlreadyCached && oldHash == hash {
 		// item is already downloaded. let's check if the item on disk has been changed by a 3rd party since our last check.
 		diskContent, err := conf.Destination.Read()
 		if err == nil {
 			diskHash := hashContent(diskContent)
-			log.Info().Str(logComponent, componentName).Str("hash", hash).Str("diskHash", diskHash).Msg("Cache check #2")
+			log.Debug().Str(logComponent, componentName).Str("hash", hash).Str("diskHash", diskHash).Msg("Cache check #2")
 			if diskHash == hash {
 				// file exists locally and is identical to the item we downloaded, we're done
 				return nil
