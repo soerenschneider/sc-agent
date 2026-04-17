@@ -9,13 +9,16 @@ import (
 	"github.com/soerenschneider/sc-agent/internal/services/components/secret_replication"
 	"github.com/soerenschneider/sc-agent/internal/services/components/secret_replication/formatter"
 	"github.com/soerenschneider/sc-agent/internal/storage"
+	"github.com/soerenschneider/sc-agent/pkg"
 )
 
 const (
-	vaultSecretSyncerFormatterYamlKey                = "yaml"
-	vaultSecretSyncerFormatterJsonKey                = "json"
-	vaultSecretSyncerFormatterEnvKey                 = "env"
-	vaultSecretSyncerFormatterEnvOptionUppercaseKeys = "uppercase_keys"
+	vaultSecretSyncerFormatterYamlKey                    = "yaml"
+	vaultSecretSyncerFormatterJsonKey                    = "json"
+	vaultSecretSyncerFormatterTemplateKey                = "template"
+	vaultSecretSyncerFormatterTemplateOptionTemplateFile = "file"
+	vaultSecretSyncerFormatterEnvKey                     = "env"
+	vaultSecretSyncerFormatterEnvOptionUppercaseKeys     = "uppercase_keys"
 )
 
 type Formatter interface {
@@ -98,6 +101,20 @@ func buildSecretFormatter(name string, arguments map[string]any) (Formatter, err
 		return &formatter.YamlFormatter{}, nil
 	case vaultSecretSyncerFormatterJsonKey:
 		return &formatter.JsonFormatter{}, nil
+	case vaultSecretSyncerFormatterTemplateKey:
+		if arguments == nil {
+			return nil, errors.New("no formatter arguments found")
+		}
+		var templateFile string
+		val, found := arguments[vaultSecretSyncerFormatterTemplateOptionTemplateFile]
+		if found {
+			convertedVal, success := val.(string)
+			if success {
+				templateFile = convertedVal
+			}
+		}
+
+		return formatter.NewTemplateFormatter(pkg.GetExpandedFile(templateFile))
 	default:
 		return nil, errors.New("no implementation found")
 	}

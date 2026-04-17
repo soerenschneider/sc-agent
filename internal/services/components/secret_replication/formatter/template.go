@@ -9,8 +9,8 @@ type TemplateFormatter struct {
 	tmpl *template.Template
 }
 
-func NewTemplateFormatter(templateText string) (*TemplateFormatter, error) {
-	t, err := template.New("secret").Parse(templateText)
+func NewTemplateFormatter(file string) (*TemplateFormatter, error) {
+	t, err := template.ParseFiles(file)
 	if err != nil {
 		return nil, err
 	}
