@@ -110,9 +110,6 @@ func NewFilesystemStorageFromUri(uri string) (*FilesystemStorage, error) {
 func (fss *FilesystemStorage) Read() ([]byte, error) {
 	data, err := afero.ReadFile(fss.fs, fss.FilePath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, ErrNoCertFound
-		}
 		return nil, err
 	}
 

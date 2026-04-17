@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand/v2"
+	"os"
 	"sync"
 	"time"
 
@@ -221,7 +222,7 @@ func getRequest(conf domain.ManagedCertificateConfig) domain.CertificateConfig {
 func (s *Service) shouldIssueNewCertificate(ctx context.Context, sink X509CertStore) (bool, error) {
 	cert, err := sink.ReadCert()
 	if err != nil || cert == nil {
-		if errors.Is(err, storage.ErrNoCertFound) {
+		if errors.Is(err, storage.ErrNoCertFound) || errors.Is(err, os.ErrNotExist) {
 			log.Info().Str("component", pkiServiceComponent).Msg("No existing certificate found")
 			return true, nil
 		} else {
