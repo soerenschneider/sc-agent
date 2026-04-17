@@ -20,12 +20,6 @@ var (
 		Name:      "reboot_paused_bool",
 	})
 
-	Version = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: namespace,
-		Subsystem: subsystemRebootManager,
-		Name:      "version",
-	}, []string{"version"})
-
 	CheckerLastCheck = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: namespace,
 		Subsystem: subsystemRebootManager,

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
+	"github.com/soerenschneider/sc-agent/internal"
 	"go.uber.org/multierr"
 )
 
@@ -31,6 +33,12 @@ var (
 		Help:      "Timestamp of start of sc-agent",
 	})
 
+	BuildInfo = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "build_info",
+		Help:      "Build information for sc-agent, always 1.",
+	}, []string{"version", "commit", "go_version"})
+
 	Heartbeat = promauto.NewGauge(prometheus.GaugeOpts{
 		Namespace: namespace,
 		Name:      "heartbeat_timestamp_seconds",
@@ -46,6 +54,11 @@ var (
 
 func init() {
 	ProcessStart.SetToCurrentTime()
+	BuildInfo.WithLabelValues(
+		internal.BuildVersion,
+		internal.CommitHash,
+		runtime.Version(),
+	).Set(1)
 }
 
 type MetricsServer struct {
