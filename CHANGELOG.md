@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.14.0](https://github.com/soerenschneider/sc-agent/compare/v1.13.1...v1.14.0) (2026-04-17)
+
+
+### Features
+
+* support go templates for secret syncing ([978fa4c](https://github.com/soerenschneider/sc-agent/commit/978fa4cb27a661f666e841f8ace9fb1ec58b1d5b))
+
+
+### Bug Fixes
+
+* allow using identical kv2 path for multiple secret sync requests ([4eabe20](https://github.com/soerenschneider/sc-agent/commit/4eabe20adbf8adece9113d1540c8a2b96caa439d))
+
 ## [1.13.1](https://github.com/soerenschneider/sc-agent/compare/v1.13.0...v1.13.1) (2026-01-26)
 
 
