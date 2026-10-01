@@ -58,10 +58,7 @@ func main() {
 		log.Fatal().Err(err).Msg("invalid configuration")
 	}
 
-	services, err := BuildDeps(*conf)
-	if err != nil {
-		log.Fatal().Err(err).Msg("could not build services")
-	}
+	services := BuildDeps(*conf)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -70,6 +67,14 @@ func main() {
 	scAgentFatalErrors := make(chan error, 1)
 
 	log.Info().Str(logComponent, mainComponentName).Msgf("%d active components: %v", len(services.EnabledComponents()), services.EnabledComponents())
+	if degraded := metrics.DegradedComponents(); len(degraded) > 0 {
+		// components that could not be built do not recover without a restart, without any working component
+		// there is nothing left to do
+		if !services.HasOperationalComponents() {
+			log.Fatal().Str(logComponent, mainComponentName).Strs("degraded_components", degraded).Msg("all components are degraded, exiting")
+		}
+		log.Warn().Str(logComponent, mainComponentName).Strs("degraded_components", degraded).Msg("running in degraded mode")
+	}
 
 	if conf.Http != nil && conf.Http.Enabled {
 		apiServer, err := buildApiServer(*conf, services)

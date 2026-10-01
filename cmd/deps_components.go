@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/soerenschneider/sc-agent/internal/domain"
 	"github.com/soerenschneider/sc-agent/internal/domain/http_replication"
 	"github.com/soerenschneider/sc-agent/internal/events"
+	"github.com/soerenschneider/sc-agent/internal/metrics"
 	http_replication_svc "github.com/soerenschneider/sc-agent/internal/services/components/http_replication"
 	"github.com/soerenschneider/sc-agent/internal/services/components/libvirt"
 	"github.com/soerenschneider/sc-agent/internal/services/components/packages"
@@ -27,100 +27,118 @@ import (
 	"github.com/soerenschneider/sc-agent/internal/storage"
 	"github.com/soerenschneider/sc-agent/internal/sysinfo"
 	"github.com/soerenschneider/sc-agent/pkg/reboot"
-	"go.uber.org/multierr"
 )
 
 var httpClient = retryablehttp.NewClient().HTTPClient
 
+// BuildDeps builds all configured components. Components that can not be built are not fatal: they are left
+// disabled, flagged as degraded via metrics and the remaining components keep working.
+//
 //nolint:cyclop
-func BuildDeps(conf config.Config) (*ports.Components, error) {
+func BuildDeps(conf config.Config) *ports.Components {
 	ret := &ports.Components{}
-	var err, errs error
 
-	events.ConfiguredEventSink, err = buildEventSink(conf, ret)
-	errs = multierr.Append(errs, err)
-
-	ret.Packages, err = buildPackages(conf)
-	if err != nil {
-		errs = multierr.Append(errs, err)
+	if sink, err := buildEventSink(conf, ret); err != nil {
+		degrade("event_sink", err)
+	} else {
+		events.ConfiguredEventSink = sink
 	}
 
-	ret.PowerStatus, err = buildPowerstatus(conf)
-	if err != nil {
-		errs = multierr.Append(errs, err)
+	if pkgs, err := buildPackages(conf); err != nil {
+		degrade("packages", err)
+	} else {
+		ret.Packages = pkgs
 	}
 
-	ret.Libvirt, err = buildLibvirt(conf)
-	if err != nil {
-		errs = multierr.Append(errs, err)
+	if powerStatus, err := buildPowerstatus(conf); err != nil {
+		degrade("power_status", err)
+	} else {
+		ret.PowerStatus = powerStatus
 	}
 
-	ret.Services, err = buildServices(conf)
-	if err != nil {
-		errs = multierr.Append(errs, err)
+	if libvirtSvc, err := buildLibvirt(conf); err != nil {
+		degrade("libvirt", err)
+	} else {
+		ret.Libvirt = libvirtSvc
 	}
 
-	ret.RebootManager, err = buildRebootManager(conf)
-	if err != nil {
-		errs = multierr.Append(errs, err)
+	if services, err := buildServices(conf); err != nil {
+		degrade("services", err)
+	} else {
+		ret.Services = services
 	}
 
-	ret.Wol, err = buildWol(conf)
-	if err != nil {
-		errs = multierr.Append(errs, err)
+	if rebootManager, err := buildRebootManager(conf); err != nil {
+		degrade("reboot_manager", err)
+	} else {
+		ret.RebootManager = rebootManager
+	}
+
+	if wolSvc, err := buildWol(conf); err != nil {
+		degrade("wol", err)
+	} else {
+		ret.Wol = wolSvc
 	}
 
 	if strings.HasPrefix(internal.BuildVersion, "v") {
-		ret.ReleaseWatcher, err = buildReleaseWatcher(conf)
-		if err != nil {
-			errs = multierr.Append(errs, err)
+		if releaseWatcher, err := buildReleaseWatcher(conf); err != nil {
+			degrade("release_watcher", err)
+		} else {
+			ret.ReleaseWatcher = releaseWatcher
 		}
 	} else {
 		log.Warn().Str("build_version", internal.BuildVersion).Msg("not building release watcher, no valid BuildVersion")
 	}
 
-	if err := vault.BuildVaultClients(conf); err != nil {
-		errs = multierr.Append(errs, err)
-	}
+	// failing vault clients are flagged as degraded by the vault package itself
+	vault.BuildVaultClients(conf)
 
 	if conf.SecretsReplication != nil && conf.SecretsReplication.Enabled {
-		ret.SecretsReplication, err = vault.BuildSecretReplication(conf.SecretsReplication)
-		if err != nil {
-			errs = multierr.Append(errs, err)
+		if svc, err := vault.BuildSecretReplication(conf.SecretsReplication); err != nil {
+			degrade("secrets_replication", err)
+		} else {
+			ret.SecretsReplication = svc
 		}
 	}
 
 	if conf.SshSigner != nil && conf.SshSigner.Enabled {
-		ret.SshCertificates, err = vault.BuildSshService(*conf.SshSigner)
-		if err != nil {
-			errs = multierr.Append(errs, err)
+		if svc, err := vault.BuildSshService(*conf.SshSigner); err != nil {
+			degrade("ssh_certificates", err)
+		} else {
+			ret.SshCertificates = svc
 		}
 	}
 
 	if conf.X509Pki != nil && conf.X509Pki.Enabled {
-		ret.Pki, err = vault.BuildPkiService(*conf.X509Pki)
-		if err != nil {
-			errs = multierr.Append(errs, err)
+		if svc, err := vault.BuildPkiService(*conf.X509Pki); err != nil {
+			degrade("pki", err)
+		} else {
+			ret.Pki = svc
 		}
 	}
 
 	if conf.Acme != nil && conf.Acme.Enabled {
-		ret.Acme, err = vault.BuildAcmeService(*conf.Acme)
-		if err != nil {
-			errs = multierr.Append(errs, err)
+		if svc, err := vault.BuildAcmeService(*conf.Acme); err != nil {
+			degrade("acme", err)
+		} else {
+			ret.Acme = svc
 		}
 	}
 
 	if conf.HttpReplication != nil && conf.HttpReplication.Enabled {
-		ret.HttpReplication, err = buildHttpReplication(*conf.HttpReplication)
-		if err != nil {
-			errs = multierr.Append(errs, err)
+		if svc, err := buildHttpReplication(*conf.HttpReplication); err != nil {
+			degrade("http_replication", err)
 		} else {
-			go ret.HttpReplication.StartReplication(context.Background())
+			ret.HttpReplication = svc
 		}
 	}
 
-	return ret, errs
+	return ret
+}
+
+func degrade(component string, err error) {
+	log.Error().Str(logComponent, mainComponentName).Str("degraded_component", component).Err(err).Msg("could not build component, running in degraded mode")
+	metrics.SetComponentDegraded(component)
 }
 
 func buildHttpReplication(conf config.HttpReplication) (*http_replication_svc.Service, error) {
@@ -172,7 +190,7 @@ func buildRebootManager(config config.Config) (ports.RebootManager, error) {
 
 	groups, err := deps.BuildGroups(groupUpdates, config.RebootManager)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not build groups")
+		return nil, fmt.Errorf("could not build groups: %w", err)
 	}
 
 	rebootImpl := &reboot.DefaultRebootImpl{}

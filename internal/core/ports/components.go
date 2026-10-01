@@ -122,6 +122,17 @@ func (s *Components) StartServices(ctx context.Context, conf config.Config, scAg
 	}()
 }
 
+// HasOperationalComponents returns whether at least one component that does actual work has been built. The release
+// watcher only reports on sc-agent itself and is therefore not taken into account.
+func (s *Components) HasOperationalComponents() bool {
+	for _, component := range s.EnabledComponents() {
+		if component != "ReleaseWatcher" {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Components) EnabledComponents() []string {
 	once.Do(func() {
 		v := reflect.ValueOf(s).Elem() // Get the value of the pointer to the struct
