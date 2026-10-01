@@ -70,7 +70,7 @@ func (t *TokenRenewer) StartTokenRenewal(ctx context.Context, wg *sync.WaitGroup
 			tokenErr := manageTokenLifecycle(ctx, t.client, vaultLoginResp, t.clientName)
 			if tokenErr != nil {
 				metrics.VaultTokenRenewErrors.WithLabelValues(t.clientName).Inc()
-				log.Error().Str(logComponent, "vault").Str(logSubComponent, vaultTokenRenewerComponent).Err(err).Msgf("unable to start managing token lifecycle")
+				log.Error().Str(logComponent, "vault").Str(logSubComponent, vaultTokenRenewerComponent).Err(tokenErr).Msgf("unable to start managing token lifecycle")
 			} else {
 				metrics.VaultTokenRenewals.WithLabelValues(t.clientName).Inc()
 			}
@@ -83,8 +83,7 @@ func (t *TokenRenewer) StartTokenRenewal(ctx context.Context, wg *sync.WaitGroup
 func manageTokenLifecycle(ctx context.Context, client *vault.Client, token *vault.Secret, clientName string) error {
 	renew := token.Auth.Renewable // You may notice a different top-level field called Renewable. That one is used for dynamic secrets renewal, not token renewal.
 	if !renew {
-		log.Warn().Msg("Token is not configured to be renewable. Re-attempting login.")
-		return nil
+		return waitForTokenExpiry(ctx, token.Auth.LeaseDuration)
 	}
 
 	watcher, err := client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{
@@ -121,4 +120,21 @@ func manageTokenLifecycle(ctx context.Context, client *vault.Client, token *vaul
 			log.Info().Str(logComponent, "vault").Str(logSubComponent, vaultTokenRenewerComponent).Int("token_ttl", renewal.Secret.Auth.LeaseDuration).Msgf("Successfully renewed token")
 		}
 	}
+}
+
+// waitForTokenExpiry blocks until a non-renewable token has expired, so a new login is not attempted immediately.
+// Tokens without a TTL never expire, there is nothing left to do for them.
+func waitForTokenExpiry(ctx context.Context, leaseDurationSeconds int) error {
+	if leaseDurationSeconds <= 0 {
+		log.Info().Str(logComponent, "vault").Str(logSubComponent, vaultTokenRenewerComponent).Msg("Token is not renewable and has no TTL, no token lifecycle management needed")
+		<-ctx.Done()
+		return nil
+	}
+
+	log.Warn().Str(logComponent, "vault").Str(logSubComponent, vaultTokenRenewerComponent).Int("token_ttl", leaseDurationSeconds).Msg("Token is not configured to be renewable, re-attempting login after it expired")
+	select {
+	case <-ctx.Done():
+	case <-time.After(time.Duration(leaseDurationSeconds) * time.Second):
+	}
+	return nil
 }
