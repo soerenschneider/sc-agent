@@ -3,16 +3,17 @@ package vault
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	vault "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
 	"github.com/soerenschneider/sc-agent/internal/config"
 	vault_config "github.com/soerenschneider/sc-agent/internal/config/vault"
+	"github.com/soerenschneider/sc-agent/internal/metrics"
 	"github.com/soerenschneider/sc-agent/internal/services/components/vault_common"
 	"github.com/soerenschneider/sc-agent/internal/services/components/vault_common/auth"
 	pkg_vault "github.com/soerenschneider/sc-agent/pkg/vault"
-	"go.uber.org/multierr"
 )
 
 var (
@@ -21,18 +22,20 @@ var (
 )
 
 func getVaultClient(key string) *vault_common.VaultCommon {
+	mutex.Lock()
+	defer mutex.Unlock()
 	return clients[key]
 }
 
-func BuildVaultClients(conf config.Config) error {
-	var errs error
+// BuildVaultClients builds all configured Vault clients. Clients that can not be built are skipped and flagged as
+// degraded, components depending on them will subsequently fail to build.
+func BuildVaultClients(conf config.Config) {
 	for clientId, vaultConf := range conf.Vault {
 		if err := buildVaultClient(clientId, vaultConf); err != nil {
-			errs = multierr.Append(errs, err)
+			log.Error().Str("component", "vault").Str("client", clientId).Err(err).Msg("could not build vault client, running in degraded mode")
+			metrics.SetComponentDegraded(vault_common.DegradedComponentName(clientId))
 		}
 	}
-
-	return errs
 }
 
 func getOpts(conf vault_config.Vault) ([]vault_common.ApproleSecretIdRotationOpts, error) {
@@ -119,17 +122,37 @@ func buildVaultClient(clientId string, conf vault_config.Vault) error {
 	return nil
 }
 
-func StartTokenRenewal(ctx context.Context, wg *sync.WaitGroup, vaultFatalError chan error) {
-	for key := range clients {
-		client := clients[key]
-		go client.StartTokenRenewer(ctx, wg, vaultFatalError)
+// StartTokenRenewal starts logging in and renewing tokens for all Vault clients. After a client has successfully
+// logged in, its approle secret_id rotation is started.
+func StartTokenRenewal(ctx context.Context) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	for _, client := range clients {
+		go client.StartTokenRenewer(ctx)
+		go func() {
+			select {
+			case <-ctx.Done():
+			case <-client.LoggedIn():
+				client.StartApproleSecretIdRotation(ctx)
+			}
+		}()
 	}
 }
 
-func StartApproleSecretIdRotation(ctx context.Context) {
-	for key := range clients {
-		client := clients[key]
-		go client.StartApproleSecretIdRotation(ctx)
+// WaitForLogin blocks until the Vault client with the given id has successfully logged in. It returns an error if
+// the client is not available or the context is canceled before.
+func WaitForLogin(ctx context.Context, clientId string) error {
+	client := getVaultClient(clientId)
+	if client == nil {
+		return fmt.Errorf("vault client %q not found", clientId)
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-client.LoggedIn():
+		return nil
 	}
 }
 

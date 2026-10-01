@@ -14,6 +14,7 @@ import (
 
 const (
 	vaultTokenRenewerComponent = "token-renewer"
+	loginRetryInterval         = 15 * time.Second
 )
 
 type TokenRenewer struct {
@@ -21,6 +22,7 @@ type TokenRenewer struct {
 	clientName string
 	auth       vault.AuthMethod
 	once       sync.Once
+	loggedIn   chan struct{}
 }
 
 func NewTokenRenewer(client *vault.Client, auth vault.AuthMethod, clientName string) (*TokenRenewer, error) {
@@ -36,33 +38,52 @@ func NewTokenRenewer(client *vault.Client, auth vault.AuthMethod, clientName str
 		client:     client,
 		auth:       auth,
 		clientName: clientName,
+		loggedIn:   make(chan struct{}),
 	}, nil
 }
 
-func (t *TokenRenewer) StartTokenRenewal(ctx context.Context, wg *sync.WaitGroup, vaultAuthError chan error) {
+// LoggedIn returns a channel that is closed after the first successful login.
+func (t *TokenRenewer) LoggedIn() <-chan struct{} {
+	return t.loggedIn
+}
+
+// StartTokenRenewal logs in to Vault and keeps the token renewed. Failing logins are not fatal, they are retried
+// indefinitely while the client is flagged as degraded.
+func (t *TokenRenewer) StartTokenRenewal(ctx context.Context) {
 	t.once.Do(func() {
 		successfulLogin := false
+		// the client is not operational until it has logged in successfully
+		component := DegradedComponentName(t.clientName)
+		metrics.SetComponentDegraded(component)
 
 		log.Info().Str("component", vaultTokenRenewerComponent).Str("client", t.clientName).Msg("Logging in to Vault")
 		for {
 			vaultLoginResp, err := t.client.Auth().Login(ctx, t.auth)
-
 			if err != nil {
+				if ctx.Err() != nil {
+					return
+				}
+
+				logEvent := log.Error().Str("component", vaultTokenRenewerComponent).Str("client", t.clientName).Err(err)
 				var respErr *vault.ResponseError
 				if errors.As(err, &respErr) {
-					log.Error().Str("component", vaultTokenRenewerComponent).Err(err).Int("status_code", respErr.StatusCode).Msgf("unable to authenticate to VaultId")
-					if respErr.StatusCode >= 400 && respErr.StatusCode <= 500 && !successfulLogin {
-						vaultAuthError <- respErr
-						successfulLogin = true
-					}
+					logEvent = logEvent.Int("status_code", respErr.StatusCode)
 				}
+				logEvent.Msg("unable to authenticate to Vault, retrying")
 				metrics.VaultLoginErrors.WithLabelValues(t.clientName).Inc()
-				time.Sleep(15 * time.Second)
+				metrics.SetComponentDegraded(component)
+
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(loginRetryInterval):
+				}
 				continue
 			}
+
+			metrics.SetComponentHealthy(component)
 			if !successfulLogin {
-				// Only write to the channel once and close it afterwards
-				wg.Done()
+				close(t.loggedIn)
 				successfulLogin = true
 			}
 			metrics.VaultLogins.WithLabelValues(t.clientName).Inc()
@@ -74,8 +95,17 @@ func (t *TokenRenewer) StartTokenRenewal(ctx context.Context, wg *sync.WaitGroup
 			} else {
 				metrics.VaultTokenRenewals.WithLabelValues(t.clientName).Inc()
 			}
+
+			if ctx.Err() != nil {
+				return
+			}
 		}
 	})
+}
+
+// DegradedComponentName returns the name a Vault client is tracked with in the degraded metrics.
+func DegradedComponentName(clientName string) string {
+	return "vault/" + clientName
 }
 
 // Starts token lifecycle management. Returns only fatal errors as errors,

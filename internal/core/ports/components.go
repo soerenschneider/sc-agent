@@ -2,10 +2,8 @@ package ports
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/soerenschneider/sc-agent/cmd/vault"
@@ -14,9 +12,8 @@ import (
 )
 
 const (
-	logComponent                    = "component"
-	mainComponentName               = "main"
-	maxDuration       time.Duration = 1<<63 - 1
+	logComponent      = "component"
+	mainComponentName = "main"
 )
 
 var (
@@ -44,7 +41,7 @@ func (s *Components) UsesVault() bool {
 	return s.SshCertificates != nil || s.Pki != nil || s.SecretsReplication != nil || s.Acme != nil
 }
 
-func (s *Components) StartServices(ctx context.Context, conf config.Config, scAgentFatalErrors chan error) {
+func (s *Components) StartServices(ctx context.Context, conf config.Config) {
 	if s.HttpReplication != nil {
 		go s.HttpReplication.StartReplication(ctx)
 	}
@@ -72,53 +69,35 @@ func (s *Components) StartServices(ctx context.Context, conf config.Config, scAg
 		return
 	}
 
-	vaultAuthReady := &sync.WaitGroup{}
-	vaultLogins := len(conf.Vault)
-	vaultAuthReady.Add(vaultLogins)
-	vault.StartTokenRenewal(ctx, vaultAuthReady, scAgentFatalErrors)
+	// Vault logins are not awaited here, a Vault instance that is not reachable must not keep the other components
+	// from working. Each Vault based component is started as soon as its Vault client has logged in.
+	vault.StartTokenRenewal(ctx)
 
-	// wait on all members of the waitgroup but end forcefully after the timeout has passed
-	vaultLoginWait := make(chan struct{})
-
-	go func() {
-		log.Info().Str(logComponent, mainComponentName).Msgf("Waiting for %d Vault logins to succeed...", vaultLogins)
-		vaultAuthReady.Wait()
-		close(vaultLoginWait)
-	}()
-
-	var timeout time.Duration
-	if conf.VaultLoginTimeout == "" {
-		timeout = maxDuration
-	} else {
-		timeout, _ = time.ParseDuration(conf.VaultLoginTimeout)
+	if s.SecretsReplication != nil {
+		startAfterVaultLogin(ctx, conf.SecretsReplication.VaultId, "continuous secret syncer process", s.SecretsReplication.StartContinuousReplication)
 	}
-
-	select {
-	case <-vaultLoginWait:
-		log.Info().Str(logComponent, mainComponentName).Msg("Vault login successful")
-	case <-time.After(timeout):
-		log.Error().Str(logComponent, mainComponentName).Msg("Vault login exceeded timeout")
-		scAgentFatalErrors <- errors.New("exceeded vault login timeout")
+	if s.SshCertificates != nil {
+		startAfterVaultLogin(ctx, conf.SshSigner.VaultId, "management of ssh certificates", s.SshCertificates.WatchCertificates)
 	}
+	if s.Pki != nil {
+		startAfterVaultLogin(ctx, conf.X509Pki.VaultId, "management of x509 certificates", s.Pki.WatchCertificates)
+	}
+	if s.Acme != nil {
+		startAfterVaultLogin(ctx, conf.Acme.VaultId, "management of acme certificates", s.Acme.WatchCertificates)
+	}
+}
 
+func startAfterVaultLogin(ctx context.Context, vaultId string, name string, start func(ctx context.Context)) {
 	go func() {
-		vault.StartApproleSecretIdRotation(ctx)
-		if s.SecretsReplication != nil {
-			log.Info().Str(logComponent, mainComponentName).Msg("starting continuous secret syncer process")
-			go s.SecretsReplication.StartContinuousReplication(ctx)
+		log.Info().Str(logComponent, mainComponentName).Str("vault_client", vaultId).Msgf("waiting for vault login before starting %s", name)
+		if err := vault.WaitForLogin(ctx, vaultId); err != nil {
+			if ctx.Err() == nil {
+				log.Error().Str(logComponent, mainComponentName).Str("vault_client", vaultId).Err(err).Msgf("not starting %s", name)
+			}
+			return
 		}
-		if s.SshCertificates != nil {
-			log.Info().Str(logComponent, mainComponentName).Msg("starting management of ssh certificates")
-			go s.SshCertificates.WatchCertificates(ctx)
-		}
-		if s.Pki != nil {
-			log.Info().Str(logComponent, mainComponentName).Msg("starting management of x509 certificates")
-			go s.Pki.WatchCertificates(ctx)
-		}
-		if s.Acme != nil {
-			log.Info().Str(logComponent, mainComponentName).Msg("starting management of acme certificates")
-			go s.Acme.WatchCertificates(ctx)
-		}
+		log.Info().Str(logComponent, mainComponentName).Str("vault_client", vaultId).Msgf("starting %s", name)
+		start(ctx)
 	}()
 }
 

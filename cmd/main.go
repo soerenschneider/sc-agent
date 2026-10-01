@@ -120,7 +120,7 @@ func main() {
 		}()
 	}
 
-	services.StartServices(ctx, *conf, scAgentFatalErrors)
+	services.StartServices(ctx, *conf)
 
 	// Handle graceful exit
 	sigc := make(chan os.Signal, 1)
