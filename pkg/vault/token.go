@@ -13,6 +13,11 @@ func ContainsFileWrappedToken(file string) (bool, error) {
 	return IsWrappedToken(string(token)), nil
 }
 
+const (
+	openbaoPrefix = "s."
+	vaultPrefix   = "hvs."
+)
+
 func IsWrappedToken(token string) bool {
-	return strings.HasPrefix(strings.TrimSpace(token), "hvs.")
+	return strings.HasPrefix(strings.TrimSpace(token), openbaoPrefix) || strings.HasPrefix(strings.TrimSpace(token), vaultPrefix)
 }
