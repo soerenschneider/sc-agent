@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.14.0](https://github.com/soerenschneider/sc-agent/compare/v1.13.1...v1.14.0) (2026-10-01)
+
+
+### Features
+
+* run in degraded mode when components fail to build ([30bb868](https://github.com/soerenschneider/sc-agent/commit/30bb8681301fe63bdd0bb9ee99e48c1583a27294))
+* support go templates for secret syncing ([978fa4c](https://github.com/soerenschneider/sc-agent/commit/978fa4cb27a661f666e841f8ace9fb1ec58b1d5b))
+* **vault:** retry logins indefinitely and start vault components per client ([71b6bd7](https://github.com/soerenschneider/sc-agent/commit/71b6bd79292501732f981d2f4415c72cec919151))
+
+
+### Bug Fixes
+
+* allow using identical kv2 path for multiple secret sync requests ([4eabe20](https://github.com/soerenschneider/sc-agent/commit/4eabe20adbf8adece9113d1540c8a2b96caa439d))
+* **openbao:** support openbao wrapped secrets ([65f8344](https://github.com/soerenschneider/sc-agent/commit/65f83440be77f277259f30298517361ddee67efa))
+* **vault:** verify token auth and respect TTL of non-renewable tokens ([61d13b6](https://github.com/soerenschneider/sc-agent/commit/61d13b64b70074811e410a9e7e1fdbcbda19142b))
+
 ## [1.13.1](https://github.com/soerenschneider/sc-agent/compare/v1.13.0...v1.13.1) (2026-01-26)
 
 
