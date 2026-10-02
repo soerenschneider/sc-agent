@@ -1,8 +1,6 @@
 module github.com/soerenschneider/sc-agent
 
-go 1.24.0
-
-toolchain go1.25.6
+go 1.26.0
 
 require (
 	github.com/adrianbrad/queue v1.4.0
@@ -32,8 +30,8 @@ require (
 	go.uber.org/multierr v1.11.0
 	golang.org/x/crypto v0.47.0
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96
-	golang.org/x/sys v0.40.0
-	golang.org/x/term v0.39.0
+	golang.org/x/sys v0.48.0
+	golang.org/x/term v0.46.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
