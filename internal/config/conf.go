@@ -40,6 +40,7 @@ type Config struct {
 	ReleaseWatcher     *ReleaseWatcher           `yaml:"release_watcher"`
 	Libvirt            *Libvirt                  `yaml:"libvirt"`
 	Wol                *Wol                      `yaml:"wol"`
+	Nftables           *Nftables                 `yaml:"nftables"`
 	SecretsReplication *vault.SecretsReplication `yaml:"secrets_replication"`
 	SshSigner          *vault.SshPki             `yaml:"ssh_pki"`
 	X509Pki            *vault.X509Pki            `yaml:"x509_pki"`
@@ -212,6 +213,21 @@ type Wol struct {
 	Enabled       bool              `yaml:"enabled"`
 	Aliases       map[string]string `yaml:"aliases" validate:"required_if=Enabled true"`
 	BroadcastAddr string            `yaml:"broadcast" validate:"required,ip"`
+}
+
+type Nftables struct {
+	Enabled bool `yaml:"enabled"`
+	UseSudo bool `yaml:"use_sudo"`
+	// Sets maps an alias, used to address the set via the API, to a predefined named set
+	Sets map[string]NftablesSet `yaml:"sets" validate:"required_if=Enabled true,dive"`
+}
+
+type NftablesSet struct {
+	Family string `yaml:"family" validate:"required,oneof=ip ip6 inet arp bridge netdev"`
+	Table  string `yaml:"table" validate:"required,printascii,excludesall= ;{}"`
+	Set    string `yaml:"set" validate:"required,printascii,excludesall= ;{}"`
+	// MaxTimeout optionally limits the timeout that can be requested when adding an element
+	MaxTimeout string `yaml:"max_timeout" validate:"omitempty,duration"`
 }
 
 type HttpReplication struct {

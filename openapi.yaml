@@ -27,6 +27,8 @@ tags:
     description: Tag for k0s related endpoints
   - name: libvirt
     description: Tag for libvirt related endpoints
+  - name: nftables
+    description: Tag for nftables related endpoints
   - name: packages
     description: Tag for packages related endpoints
   - name: pki
@@ -479,6 +481,44 @@ paths:
       responses:
         '200':
           description: Domain shutdown successful
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /v1/nftables/sets/{set}/elements:
+    post:
+      operationId: nftablesPostSetElement
+      summary: Add an element to a nftables set
+      description: >
+        Adds an element to a predefined named nftables set. The element is removed automatically by nftables after
+        the timeout expired. If the element is already part of the set, its timeout is reset. The set must be
+        configured and is addressed by its alias.
+      tags:
+        - nftables
+      parameters:
+        - name: set
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The configured alias of the nftables set
+          example: ssh-allowlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NftablesSetElement'
+      responses:
+        '200':
+          description: Element added to set successfully
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -1036,6 +1076,26 @@ components:
         formatter: "json"
         dest_uri: "/tmp/db.json"
         status: "failed"
+
+    NftablesSetElement:
+      type: object
+      title: NftablesSetElement
+      description: An element to add to a nftables set
+      required:
+        - element
+        - timeout
+      properties:
+        element:
+          type: string
+          description: The element to add, either an IP address or a prefix in CIDR notation
+          example: "192.0.2.10"
+        timeout:
+          type: string
+          description: Duration after which the element is removed from the set, in Go duration format
+          example: "1h30m"
+      example:
+        element: "192.0.2.10"
+        timeout: "1h30m"
 
     PackageUpdates:
       title: PackageUpdates

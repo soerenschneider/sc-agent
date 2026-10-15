@@ -27,6 +27,7 @@ type Components struct {
 	HttpReplication    HttpReplication
 	K0s                K0s
 	Libvirt            Libvirt
+	Nftables           Nftables
 	Packages           SystemPackages
 	Pki                X509Pki
 	PowerStatus        SystemPowerStatus

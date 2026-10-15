@@ -20,6 +20,7 @@
 1. [Components](#components)
     - [k0s](#k0s)
     - [libvirt](#libvirt)
+    - [nftables](#nftables)
     - [packages](#packages)
     - [pki](#pki)
     - [secrets](#secrets)
@@ -80,6 +81,37 @@ All successfully authenticated users share the same permissions, no distinguishe
 - start a libvirt domain
 - shutdown a libvirt domain
 - restart a libvirt domain
+
+### nftables
+- add an IP address or prefix to a predefined named set with a timeout. If the element is already part of the set,
+  its timeout is reset.
+
+Only sets that are configured can be modified, they are addressed via their alias. The set must be created with the
+`timeout` flag, sets containing prefixes additionally need the `interval` flag.
+
+```yaml
+nftables:
+  enabled: true
+  use_sudo: true
+  sets:
+    ssh-allowlist:          # alias used in the API
+      family: inet
+      table: filter
+      set: ssh_allowed
+      max_timeout: 24h      # optional
+```
+
+```bash
+curl -X POST https://localhost:9999/v1/nftables/sets/ssh-allowlist/elements \
+  -H 'Content-Type: application/json' -d '{"element": "192.0.2.10", "timeout": "1h"}'
+```
+
+Via MQTT, publish to `sc-agent/<topic_host_prefix>/nftables/add` (or a group topic) with the alias in the payload. The
+result is published to `sc-agent/<topic_host_prefix>/nftables/response/add`.
+
+```json
+{"set": "ssh-allowlist", "element": "192.0.2.10", "timeout": "1h"}
+```
 
 ### packages
 - list installed packages on a system

@@ -17,6 +17,7 @@ import (
 	"github.com/soerenschneider/sc-agent/internal/metrics"
 	http_replication_svc "github.com/soerenschneider/sc-agent/internal/services/components/http_replication"
 	"github.com/soerenschneider/sc-agent/internal/services/components/libvirt"
+	"github.com/soerenschneider/sc-agent/internal/services/components/nftables"
 	"github.com/soerenschneider/sc-agent/internal/services/components/packages"
 	"github.com/soerenschneider/sc-agent/internal/services/components/reboot_manager/app"
 	"github.com/soerenschneider/sc-agent/internal/services/components/reboot_manager/group"
@@ -60,6 +61,12 @@ func BuildDeps(conf config.Config) *ports.Components {
 		degrade("libvirt", err)
 	} else {
 		ret.Libvirt = libvirtSvc
+	}
+
+	if nftablesSvc, err := buildNftables(conf); err != nil {
+		degrade("nftables", err)
+	} else {
+		ret.Nftables = nftablesSvc
 	}
 
 	if services, err := buildServices(conf); err != nil {
@@ -245,6 +252,14 @@ func buildLibvirt(conf config.Config) (ports.Libvirt, error) {
 	}
 
 	return libvirt.New(*conf.Libvirt)
+}
+
+func buildNftables(conf config.Config) (ports.Nftables, error) {
+	if conf.Nftables == nil || !conf.Nftables.Enabled {
+		return nil, nil
+	}
+
+	return nftables.New(*conf.Nftables)
 }
 
 func buildWol(conf config.Config) (ports.WakeOnLan, error) {

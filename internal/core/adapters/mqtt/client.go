@@ -71,6 +71,9 @@ func (c *Client) StartListener(ctx context.Context, wg *sync.WaitGroup) error {
 	router.MustRegisterHandler("packages/updates", packageHandler)
 	router.MustRegisterHandler("packages/upgrade", packageHandler)
 
+	nftablesHandler := &NftablesHandler{services: c.services}
+	router.MustRegisterHandler("nftables/add", nftablesHandler)
+
 	if err := router.Subscribe(); err != nil {
 		return err
 	}
