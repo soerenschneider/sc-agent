@@ -19,20 +19,23 @@ func (h *PackagesHandler) Handle(_ context.Context, topic string, _ []byte) (any
 		return nil, domain.ErrComponentDisabled
 	}
 
+	// responses use the same DTOs as the http adapter
 	verb := strings.ToLower(path.Base(topic))
 	switch verb {
 	case "upgrade":
-		if err := h.services.Packages.Upgrade(); err != nil {
-			return nil, err
-		}
+		return nil, h.services.Packages.Upgrade()
 	case "list":
 		installed, err := h.services.Packages.ListInstalled()
 		if err != nil {
 			return nil, err
 		}
-		// borrow code from http adapter to convert to dto
-		dto := httpAdapter.ConvertPackagesToDto(installed)
-		return dto, nil
+		return httpAdapter.PackagesInstalled{Packages: httpAdapter.ConvertPackagesToDto(installed)}, nil
+	case "updates":
+		updates, err := h.services.Packages.CheckUpdate()
+		if err != nil {
+			return nil, err
+		}
+		return httpAdapter.ConvertPackageUpdatesToDto(updates), nil
 	}
 
 	return nil, domain.ErrNotImplemented

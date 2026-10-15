@@ -43,10 +43,14 @@ func (s *HttpServer) PackagesUpdatesGet(_ context.Context, _ PackagesUpdatesGetR
 		return PackagesUpdatesGet500ApplicationProblemPlusJSONResponse{}, nil
 	}
 
-	return PackagesUpdatesGet200JSONResponse{
-		UpdatablePackages: ConvertPackagesToDto(resp.UpdatablePackages),
-		UpdatesAvailable:  resp.UpdatesAvailable,
-	}, nil
+	return PackagesUpdatesGet200JSONResponse(ConvertPackageUpdatesToDto(resp)), nil
+}
+
+func ConvertPackageUpdatesToDto(result domain.CheckUpdateResult) PackageUpdates {
+	return PackageUpdates{
+		UpdatablePackages: ConvertPackagesToDto(result.UpdatablePackages),
+		UpdatesAvailable:  result.UpdatesAvailable,
+	}
 }
 
 func (s *HttpServer) PackagesUpgradeRequestsPost(_ context.Context, _ PackagesUpgradeRequestsPostRequestObject) (PackagesUpgradeRequestsPostResponseObject, error) {

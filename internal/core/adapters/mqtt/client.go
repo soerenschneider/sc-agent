@@ -68,6 +68,7 @@ func (c *Client) StartListener(ctx context.Context, wg *sync.WaitGroup) error {
 
 	packageHandler := &PackagesHandler{services: c.services}
 	router.MustRegisterHandler("packages/list", packageHandler)
+	router.MustRegisterHandler("packages/updates", packageHandler)
 	router.MustRegisterHandler("packages/upgrade", packageHandler)
 
 	if err := router.Subscribe(); err != nil {

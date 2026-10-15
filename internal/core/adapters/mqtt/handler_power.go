@@ -21,13 +21,9 @@ func (h *PowerStatusHandler) Handle(_ context.Context, topic string, _ []byte) (
 	verb := strings.ToLower(path.Base(topic))
 	switch verb {
 	case "shutdown":
-		if err := h.services.PowerStatus.Shutdown(); err != nil {
-			return nil, err
-		}
+		return nil, h.services.PowerStatus.Shutdown()
 	case "reboot":
-		if err := h.services.PowerStatus.Reboot(); err != nil {
-			return nil, err
-		}
+		return nil, h.services.PowerStatus.Reboot()
 	}
 
 	return nil, domain.ErrNotImplemented
