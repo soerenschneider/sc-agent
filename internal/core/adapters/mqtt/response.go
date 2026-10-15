@@ -59,6 +59,9 @@ func (rp *ResponsePublisher) PublishError(responseTopic string, err error, reque
 		message = "component disabled"
 	case errors.Is(err, domain.ErrPermissionDenied):
 		message = "not allowed"
+	case errors.Is(err, domain.ErrNotFound), errors.Is(err, domain.ErrInvalidInput):
+		// caused by the caller, safe to return
+		message = err.Error()
 	default:
 		// don't leak sensitive information
 		message = "internal server error"
