@@ -19,8 +19,10 @@ type AppRoleAuth struct {
 	secretIDFile string
 	secretIDEnv  string
 	unwrap       bool
-	mutex        sync.Mutex
-	once         sync.Once
+	// unwrapped is set once the wrapping token was successfully unwrapped, so failed attempts are retried on the
+	// next login
+	unwrapped bool
+	mutex     sync.Mutex
 }
 
 var _ api.AuthMethod = (*AppRoleAuth)(nil)
@@ -129,45 +131,37 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 		secretIDValue = s
 	}
 
-	var unwrapErr error
-	a.once.Do(func() {
-		// if the caller indicated that the value was actually a wrapping token, unwrap it first
-		if a.unwrap {
-			log.Info().Str("subcomponent", "auth-approle").Str("component", "vault").Msg("attempting to unwrap secret ID")
-			unwrappedToken, err := client.Logical().UnwrapWithContext(ctx, secretIDValue)
-			if err != nil {
-				unwrapErr = fmt.Errorf("unable to unwrap response wrapping token: %w", err)
-				return
-			}
-			log.Info().Str("subcomponent", "auth-approle").Str("component", "vault").Msg("secret_id unwrapped successfully")
-
-			data, ok := unwrappedToken.Data["secret_id"]
-			if !ok {
-				unwrapErr = fmt.Errorf("unable to unwrap response wrapping token: secret_id not found in response")
-				return
-			}
-
-			secretIDValue = data.(string)
-			// write back unwrapped secret_id to file so it can be consumed by multiple clients
-			if a.secretIDFile != "" {
-				log.Info().Str("component", "vault").Str("secret_id_file", a.secretIDFile).Msg("Writing unwrapped secret_id to file")
-				data := []byte(secretIDValue)
-				if err := os.WriteFile(a.secretIDFile, data, 0600); err != nil {
-					log.Error().Str("component", "vault").Err(err).Msg("could not write unwrapped secret_id to file")
-				}
-			} else if a.secretIDEnv != "" {
-				// store back unwrapped secret_id so it can be consumed by multiple clients
-				a.secretID = secretIDValue
-			}
+	// if the caller indicated that the value was actually a wrapping token, unwrap it first
+	if a.unwrap && !a.unwrapped {
+		log.Info().Str("subcomponent", "auth-approle").Str("component", "vault").Msg("attempting to unwrap secret ID")
+		unwrappedToken, err := client.Logical().UnwrapWithContext(ctx, secretIDValue)
+		if err != nil {
+			return nil, fmt.Errorf("unable to unwrap response wrapping token: %w", err)
 		}
-	})
+		log.Info().Str("subcomponent", "auth-approle").Str("component", "vault").Msg("secret_id unwrapped successfully")
 
-	if unwrapErr != nil {
-		return nil, unwrapErr
+		data, ok := unwrappedToken.Data["secret_id"]
+		if !ok {
+			return nil, fmt.Errorf("unable to unwrap response wrapping token: secret_id not found in response")
+		}
+
+		secretIDValue = data.(string)
+		// write back unwrapped secret_id to file so it can be consumed by multiple clients
+		if a.secretIDFile != "" {
+			log.Info().Str("component", "vault").Str("secret_id_file", a.secretIDFile).Msg("Writing unwrapped secret_id to file")
+			data := []byte(secretIDValue)
+			if err := os.WriteFile(a.secretIDFile, data, 0600); err != nil {
+				log.Error().Str("component", "vault").Err(err).Msg("could not write unwrapped secret_id to file")
+			}
+		} else if a.secretIDEnv != "" {
+			// store back unwrapped secret_id so it can be consumed by multiple clients
+			a.secretID = secretIDValue
+		}
+		a.unwrapped = true
 	}
 
 	loginData := map[string]interface{}{
-		"role_id": a.roleID,
+		"role_id":   a.roleID,
 		"secret_id": secretIDValue,
 	}
 
