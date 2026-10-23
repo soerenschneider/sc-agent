@@ -47,7 +47,7 @@ type Config struct {
 	RebootManager      *RebootManagerConfig      `yaml:"reboot_manager"`
 	HttpReplication    *HttpReplication          `yaml:"http_replication"`
 
-	Vault map[string]vault.Vault `yaml:"vault"`
+	Vault map[string]vault.Vault `yaml:"vault" validate:"dive"`
 
 	Metrics *Http `yaml:"metrics"`
 

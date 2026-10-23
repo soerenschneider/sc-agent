@@ -14,11 +14,24 @@ type Vault struct {
 	AuthMethod               string                    `yaml:"auth_method" validate:"required,oneof=token approle"`
 	Token                    string                    `yaml:"token" env:"VAULT_TOKEN" validate:"required_if=AuthMethod token"`
 	RoleId                   string                    `yaml:"role_id" validate:"required_if=AuthMethod approle"`
-	SecretIdFile             string                    `yaml:"secret_id_file" validate:"required_if=AuthMethod approle,file"`
-	SecretIdFileUser         string                    `yaml:"secret_id_file_user" validate:"string"`
+	SecretIdFile             string                    `yaml:"secret_id_file" validate:"required_if=AuthMethod approle"`
+	SecretIdFileUser         string                    `yaml:"secret_id_file_user"`
 	MountApprole             string                    `yaml:"approle_mount" validate:"required_if=AuthMethod approle"`
 	ApproleCidrTokenResolver *VaultApproleCidrResolver `yaml:"cidr_token_resolver"`
 	ApproleCidrLoginResolver *VaultApproleCidrResolver `yaml:"cidr_login_resolver"`
+	Bootstrap                *VaultBootstrap           `yaml:"bootstrap"`
+}
+
+// VaultBootstrap configures fetching a wrapped secret_id from approle-courier if the secret_id file is missing or the
+// secret_id is no longer valid.
+type VaultBootstrap struct {
+	Address string `yaml:"address" validate:"required,http_url"`
+	// MachineId defaults to the hostname.
+	MachineId string `yaml:"machine_id"`
+	// RoleName defaults to the role_id.
+	RoleName        string `yaml:"role_name"`
+	AgeIdentityFile string `yaml:"age_identity_file" validate:"required,file"`
+	WrapTtl         string `yaml:"wrap_ttl" validate:"omitempty,duration"`
 }
 
 type VaultApproleCidrResolver struct {

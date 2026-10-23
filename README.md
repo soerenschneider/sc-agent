@@ -70,6 +70,28 @@ Although strongly discouraged, the server can be configured to run without any a
 ### Authorization
 All successfully authenticated users share the same permissions, no distinguished roles are available.
 
+### Vault AppRole bootstrapping
+If the `secret_id_file` is missing, contains a wrapping token that can not be unwrapped anymore or Vault rejects the
+`secret_id`, a new response-wrapped `secret_id` can be fetched from [approle-courier](https://github.com/soerenschneider/approle-courier).
+The agent authenticates using an age-encrypted challenge, so its age identity must be registered with approle-courier.
+Before unwrapping, the wrapping token's `creation_path` is verified. Attempts are rate limited with an exponential
+backoff (1m up to 1h), afterwards the `secret_id` is rotated as usual.
+
+```yaml
+vault:
+  default:
+    auth_method: approle
+    role_id: demo
+    approle_mount: approle
+    secret_id_file: /etc/sc-agent/secret-id
+    bootstrap:
+      address: https://approle-courier.example.com
+      age_identity_file: /etc/sc-agent/age.key
+      machine_id: node-42   # optional, defaults to the hostname
+      role_name: demo       # optional, defaults to role_id
+      wrap_ttl: 2m          # optional
+```
+
 
 ## Components
 

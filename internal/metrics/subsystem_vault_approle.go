@@ -28,4 +28,18 @@ var (
 		Name:      "secret_id_rotation_errors_total",
 		Help:      "Expiration date of the token",
 	}, []string{"secret_id_file", "error"})
+
+	SecretIdBootstraps = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace,
+		Subsystem: subsystemVaultApprole,
+		Name:      "secret_id_bootstraps_total",
+		Help:      "Wrapped secret_ids successfully fetched from approle-courier",
+	}, []string{"secret_id_file"})
+
+	SecretIdBootstrapErrors = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace,
+		Subsystem: subsystemVaultApprole,
+		Name:      "secret_id_bootstrap_errors_total",
+		Help:      "Errors while fetching a wrapped secret_id from approle-courier",
+	}, []string{"secret_id_file", "error"})
 )

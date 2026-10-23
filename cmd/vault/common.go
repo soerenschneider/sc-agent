@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"sync"
+	"time"
 
 	vault "github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
@@ -172,7 +175,9 @@ func buildVaultAuth(conf vault_config.Vault) (vault.AuthMethod, error) {
 		}
 
 		isWrappedToken, err := pkg_vault.ContainsFileWrappedToken(conf.SecretIdFile)
-		if err != nil {
+		// a missing secret_id file is fetched from approle-courier on login
+		bootstrapMissingFile := conf.Bootstrap != nil && errors.Is(err, fs.ErrNotExist)
+		if err != nil && !bootstrapMissingFile {
 			return nil, err
 		}
 		if isWrappedToken {
@@ -180,8 +185,43 @@ func buildVaultAuth(conf vault_config.Vault) (vault.AuthMethod, error) {
 			loginOpts = append(loginOpts, auth.WithWrappingToken())
 		}
 
+		if conf.Bootstrap != nil {
+			bootstrapper, err := buildSecretIdBootstrapper(conf)
+			if err != nil {
+				return nil, fmt.Errorf("could not build secret_id bootstrapper: %w", err)
+			}
+			loginOpts = append(loginOpts, auth.WithBootstrapper(bootstrapper))
+		}
+
 		return auth.NewAppRoleAuth(conf.RoleId, secretId, loginOpts...)
 	default:
 		return nil, errors.New("unknown auth module requested")
 	}
+}
+
+func buildSecretIdBootstrapper(conf vault_config.Vault) (*auth.SecretIdBootstrapper, error) {
+	machineId := conf.Bootstrap.MachineId
+	if machineId == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			return nil, fmt.Errorf("could not determine machine_id from hostname: %w", err)
+		}
+		machineId = hostname
+	}
+
+	roleName := conf.Bootstrap.RoleName
+	if roleName == "" {
+		roleName = conf.RoleId
+	}
+
+	opts := []auth.BootstrapOption{auth.WithBootstrapMetricsLabel(conf.SecretIdFile)}
+	if conf.Bootstrap.WrapTtl != "" {
+		wrapTtl, err := time.ParseDuration(conf.Bootstrap.WrapTtl)
+		if err != nil {
+			return nil, fmt.Errorf("invalid wrap_ttl: %w", err)
+		}
+		opts = append(opts, auth.WithBootstrapWrapTtl(wrapTtl))
+	}
+
+	return auth.NewSecretIdBootstrapper(conf.Bootstrap.Address, machineId, conf.MountApprole, roleName, conf.Bootstrap.AgeIdentityFile, opts...)
 }

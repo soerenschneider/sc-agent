@@ -2,8 +2,10 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -21,9 +23,13 @@ type AppRoleAuth struct {
 	unwrap       bool
 	// unwrapped is set once the wrapping token was successfully unwrapped, so failed attempts are retried on the
 	// next login
-	unwrapped bool
-	mutex     sync.Mutex
+	unwrapped    bool
+	bootstrapper *SecretIdBootstrapper
+	mutex        sync.Mutex
 }
+
+// errSecretIDUnusable indicates that the secret_id is missing or not valid anymore and a new one is needed.
+var errSecretIDUnusable = errors.New("secret_id unusable")
 
 var _ api.AuthMethod = (*AppRoleAuth)(nil)
 
@@ -58,7 +64,7 @@ const (
 // a plaintext secret ID, initialize NewAppRoleAuth with the
 // WithWrappingToken LoginOption.
 //
-// Supported options: WithMountPath, WithWrappingToken
+// Supported options: WithMountPath, WithWrappingToken, WithBootstrapper
 func NewAppRoleAuth(roleID string, secretID *SecretID, opts ...LoginOption) (*AppRoleAuth, error) {
 	if roleID == "" {
 		return nil, fmt.Errorf("no role ID provided for login")
@@ -113,6 +119,41 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 		ctx = context.Background()
 	}
 
+	secretIDValue, err := a.readSecretID(ctx, client)
+	if err == nil {
+		var resp *api.Secret
+		resp, err = a.login(ctx, client, secretIDValue)
+		if err == nil || !isInvalidSecretID(err) {
+			return resp, err
+		}
+	}
+
+	if a.bootstrapper == nil || !errors.Is(err, errSecretIDUnusable) {
+		return nil, err
+	}
+
+	log.Warn().Str("subcomponent", "auth-approle").Str("component", "vault").Err(err).Msg("secret_id is not usable, bootstrapping a new one")
+	wrappingToken, bootstrapErr := a.bootstrapper.WrappedSecretId(ctx, client)
+	if bootstrapErr != nil {
+		return nil, fmt.Errorf("%w, bootstrapping secret_id failed: %w", err, bootstrapErr)
+	}
+
+	secretIDValue, err = a.unwrapSecretID(ctx, client, wrappingToken)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := a.login(ctx, client, secretIDValue)
+	if err != nil {
+		return nil, err
+	}
+	a.bootstrapper.Reset()
+	return resp, nil
+}
+
+// readSecretID returns the configured secret_id, unwrapping it first if it was configured to be a wrapping token.
+// Errors that indicate that a new secret_id is needed wrap errSecretIDUnusable.
+func (a *AppRoleAuth) readSecretID(ctx context.Context, client *api.Client) (string, error) {
 	var secretIDValue string
 	switch {
 	case a.secretID != "":
@@ -120,46 +161,73 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 	case a.secretIDFile != "":
 		s, err := a.readSecretIDFromFile()
 		if err != nil {
-			return nil, fmt.Errorf("error reading secret ID: %w", err)
+			return "", fmt.Errorf("%w: error reading secret ID: %w", errSecretIDUnusable, err)
+		}
+		if s == "" {
+			return "", fmt.Errorf("%w: secret ID file %q is empty", errSecretIDUnusable, a.secretIDFile)
 		}
 		secretIDValue = s
 	case a.secretIDEnv != "":
 		s := os.Getenv(a.secretIDEnv)
 		if s == "" {
-			return nil, fmt.Errorf("secret ID was specified with an environment variable %q with an empty value", a.secretIDEnv)
+			return "", fmt.Errorf("%w: secret ID was specified with an environment variable %q with an empty value", errSecretIDUnusable, a.secretIDEnv)
 		}
 		secretIDValue = s
 	}
 
 	// if the caller indicated that the value was actually a wrapping token, unwrap it first
 	if a.unwrap && !a.unwrapped {
-		log.Info().Str("subcomponent", "auth-approle").Str("component", "vault").Msg("attempting to unwrap secret ID")
-		unwrappedToken, err := client.Logical().UnwrapWithContext(ctx, secretIDValue)
-		if err != nil {
-			return nil, fmt.Errorf("unable to unwrap response wrapping token: %w", err)
-		}
-		log.Info().Str("subcomponent", "auth-approle").Str("component", "vault").Msg("secret_id unwrapped successfully")
-
-		data, ok := unwrappedToken.Data["secret_id"]
-		if !ok {
-			return nil, fmt.Errorf("unable to unwrap response wrapping token: secret_id not found in response")
-		}
-
-		secretIDValue = data.(string)
-		// write back unwrapped secret_id to file so it can be consumed by multiple clients
-		if a.secretIDFile != "" {
-			log.Info().Str("component", "vault").Str("secret_id_file", a.secretIDFile).Msg("Writing unwrapped secret_id to file")
-			data := []byte(secretIDValue)
-			if err := os.WriteFile(a.secretIDFile, data, 0600); err != nil {
-				log.Error().Str("component", "vault").Err(err).Msg("could not write unwrapped secret_id to file")
-			}
-		} else if a.secretIDEnv != "" {
-			// store back unwrapped secret_id so it can be consumed by multiple clients
-			a.secretID = secretIDValue
-		}
-		a.unwrapped = true
+		return a.unwrapSecretID(ctx, client, secretIDValue)
 	}
 
+	return secretIDValue, nil
+}
+
+// unwrapSecretID unwraps the secret_id and writes it back, so it is used for subsequent logins.
+func (a *AppRoleAuth) unwrapSecretID(ctx context.Context, client *api.Client, wrappingToken string) (string, error) {
+	log.Info().Str("subcomponent", "auth-approle").Str("component", "vault").Msg("attempting to unwrap secret ID")
+	// unwrap using a client without token: the wrapping token is sent as client token and must neither be mixed up
+	// with a (possibly expired) client token nor leak into the client
+	unwrapClient, err := tokenlessClient(client)
+	if err != nil {
+		return "", err
+	}
+	unwrappedToken, err := unwrapClient.Logical().UnwrapWithContext(ctx, wrappingToken)
+	if err != nil {
+		// a 4xx response means the wrapping token is invalid, expired or has already been used
+		var respErr *api.ResponseError
+		if errors.As(err, &respErr) && respErr.StatusCode >= 400 && respErr.StatusCode < 500 {
+			err = fmt.Errorf("%w: %w", errSecretIDUnusable, err)
+		}
+		return "", fmt.Errorf("unable to unwrap response wrapping token: %w", err)
+	}
+	if unwrappedToken == nil {
+		return "", fmt.Errorf("%w: unable to unwrap response wrapping token: empty response", errSecretIDUnusable)
+	}
+	log.Info().Str("subcomponent", "auth-approle").Str("component", "vault").Msg("secret_id unwrapped successfully")
+
+	secretIDValue, ok := unwrappedToken.Data["secret_id"].(string)
+	if !ok {
+		return "", fmt.Errorf("unable to unwrap response wrapping token: secret_id not found in response")
+	}
+
+	// write back unwrapped secret_id to file so it can be consumed by multiple clients
+	if a.secretIDFile != "" {
+		log.Info().Str("component", "vault").Str("secret_id_file", a.secretIDFile).Msg("Writing unwrapped secret_id to file")
+		data := []byte(secretIDValue)
+		if err := os.WriteFile(a.secretIDFile, data, 0600); err != nil {
+			log.Error().Str("component", "vault").Err(err).Msg("could not write unwrapped secret_id to file")
+		}
+	} else if a.secretIDEnv != "" {
+		// store back unwrapped secret_id so it can be consumed by multiple clients
+		a.secretID = secretIDValue
+	}
+	a.unwrapped = true
+
+	return secretIDValue, nil
+}
+
+func (a *AppRoleAuth) login(ctx context.Context, client *api.Client, secretIDValue string) (*api.Secret, error) {
 	loginData := map[string]interface{}{
 		"role_id":   a.roleID,
 		"secret_id": secretIDValue,
@@ -168,15 +236,55 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 	path := fmt.Sprintf("auth/%s/login", a.mountPath)
 	resp, err := client.Logical().WriteWithContext(ctx, path, loginData)
 	if err != nil {
+		if isInvalidSecretID(err) {
+			err = fmt.Errorf("%w: %w", errSecretIDUnusable, err)
+		}
 		return nil, fmt.Errorf("unable to log in with app role auth: %w", err)
 	}
 
 	return resp, nil
 }
 
+func tokenlessClient(client *api.Client) (*api.Client, error) {
+	c, err := client.Clone()
+	if err != nil {
+		return nil, err
+	}
+	c.ClearToken()
+	return c, nil
+}
+
+// isInvalidSecretID reports whether Vault rejected the login because of the secret_id, e.g. because it expired, was
+// destroyed or exceeded its number of uses. Vault responds with "invalid secret id" or, in newer versions, "invalid
+// role or secret ID".
+func isInvalidSecretID(err error) bool {
+	var respErr *api.ResponseError
+	if !errors.As(err, &respErr) || respErr.StatusCode != http.StatusBadRequest {
+		return false
+	}
+	for _, e := range respErr.Errors {
+		if strings.Contains(strings.ToLower(e), "secret id") {
+			return true
+		}
+	}
+	return false
+}
+
 func WithMountPath(mountPath string) LoginOption {
 	return func(a *AppRoleAuth) error {
 		a.mountPath = mountPath
+		return nil
+	}
+}
+
+// WithBootstrapper fetches a new wrapped secret_id using the bootstrapper if the secret_id is missing or not valid
+// anymore.
+func WithBootstrapper(b *SecretIdBootstrapper) LoginOption {
+	return func(a *AppRoleAuth) error {
+		if b == nil {
+			return errors.New("empty bootstrapper passed")
+		}
+		a.bootstrapper = b
 		return nil
 	}
 }
