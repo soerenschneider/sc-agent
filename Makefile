@@ -5,6 +5,12 @@ CHECKSUM_FILE = $(BUILD_DIR)/checksum.sha256
 SIGNATURE_KEYFILE = ~/.signify/github.sec
 DOCKER_PREFIX = ghcr.io/soerenschneider
 
+# Reproducible builds: use the exact toolchain pinned in go.mod instead of whatever Go is installed, strip local paths
+# and ignore GOFLAGS from the environment.
+export GOTOOLCHAIN := $(shell awk '/^toolchain /{print $$2}' go.mod)
+LDFLAGS = -w -X '$(MODULE)/internal.BuildVersion=$(VERSION)' -X '$(MODULE)/internal.CommitHash=$(COMMIT_HASH)'
+GO_BUILD = CGO_ENABLED=0 GOFLAGS= go build -trimpath -ldflags="$(LDFLAGS)"
+
 generate:
 	go generate  ./...
 
@@ -14,11 +20,11 @@ tests:
 	go tool cover -func=coverage.out -o=coverage.out
 
 clean:
-	git diff --quiet || { echo 'Dirty work tree' ; false; }
+	test -z "$$(git status --porcelain)" || { echo 'Dirty work tree' ; false; }
 	rm -rf ./$(BUILD_DIR)
 
 build: version-info generate
-	CGO_ENABLED=0 go build -ldflags="-w -X '$(MODULE)/internal.BuildVersion=${VERSION}' -X '$(MODULE)/internal.CommitHash=${COMMIT_HASH}'" -o $(BINARY_NAME) ./cmd
+	$(GO_BUILD) -o $(BINARY_NAME) ./cmd
 
 release: clean version-info cross-build
 	sha256sum $(BUILD_DIR)/sc-agent-* > $(CHECKSUM_FILE)
@@ -28,10 +34,10 @@ signed-release: release
 	gh-upload-assets -o soerenschneider -r sc-agent -f ~/.gh-token builds
 
 cross-build: version-info
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0       go build -ldflags="-w -X '$(MODULE)/internal.BuildVersion=${VERSION}' -X '$(MODULE)/internal.CommitHash=${COMMIT_HASH}'" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64    ./cmd
-	GOOS=linux GOARCH=arm GOARM=6 CGO_ENABLED=0 go build -ldflags="-w -X '$(MODULE)/internal.BuildVersion=${VERSION}' -X '$(MODULE)/internal.CommitHash=${COMMIT_HASH}'" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-armv6    ./cmd
-	GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags="-w -X '$(MODULE)/internal.BuildVersion=${VERSION}' -X '$(MODULE)/internal.CommitHash=${COMMIT_HASH}'" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-armv7    ./cmd
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0       go build -ldflags="-w -X '$(MODULE)/internal.BuildVersion=${VERSION}' -X '$(MODULE)/internal.CommitHash=${COMMIT_HASH}'" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-aarch64  ./cmd
+	GOOS=linux GOARCH=amd64 GOAMD64=v1     $(GO_BUILD) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64    ./cmd
+	GOOS=linux GOARCH=arm GOARM=6          $(GO_BUILD) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-armv6    ./cmd
+	GOOS=linux GOARCH=arm GOARM=7          $(GO_BUILD) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-armv7    ./cmd
+	GOOS=linux GOARCH=arm64 GOARM64=v8.0   $(GO_BUILD) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-aarch64  ./cmd
 
 validate-openapi-spec:
 	docker run --rm -it -v $(shell pwd):/tmp stoplight/spectral lint --ruleset "/tmp/.spectral.yaml" "/tmp/openapi.yaml"
