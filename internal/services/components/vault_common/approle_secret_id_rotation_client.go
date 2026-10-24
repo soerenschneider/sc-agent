@@ -110,10 +110,14 @@ func (a *ApproleSecretIdRotatorClient) Lookup(roleName, secretId string, isAcces
 }
 
 func (a *ApproleSecretIdRotatorClient) GetSecretIdAccessors(roleName string) ([]string, error) {
-	path := fmt.Sprintf("/auth/approle/role/%s/secret-id", roleName)
+	path := fmt.Sprintf("auth/%s/role/%s/secret-id", a.mountPath, roleName)
 	resp, err := a.client.List(path)
 	if err != nil {
 		return nil, err
+	}
+	// Vault responds with 404, resulting in an empty response, if the role has no secret_ids
+	if resp == nil {
+		return nil, nil
 	}
 
 	keysRaw, found := resp.Data["keys"]
