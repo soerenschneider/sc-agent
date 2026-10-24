@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"time"
 
 	"github.com/rs/zerolog/log"
 )
+
+const dynamicCidrDialTimeout = 10 * time.Second
 
 type DynamicCidrResolver struct {
 	vaultAddress string
@@ -40,8 +43,10 @@ func NewDynamicCidrResolver(vaultAddr string) (*DynamicCidrResolver, error) {
 	return &DynamicCidrResolver{vaultAddress: address}, nil
 }
 
+// GetCidr returns the single-host CIDR of the local address used to connect to Vault. Loopback addresses are rejected:
+// the connection may be proxied, in which case Vault sees a different address.
 func (r *DynamicCidrResolver) GetCidr() ([]string, error) {
-	conn, err := net.Dial("tcp", r.vaultAddress)
+	conn, err := net.DialTimeout("tcp", r.vaultAddress, dynamicCidrDialTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -50,13 +55,27 @@ func (r *DynamicCidrResolver) GetCidr() ([]string, error) {
 	}()
 
 	localAddr := conn.LocalAddr().(*net.TCPAddr)
-
-	ipNet := &net.IPNet{
-		IP:   localAddr.IP,
-		Mask: net.CIDRMask(32, 32),
+	cidr, err := hostCidr(localAddr.IP)
+	if err != nil {
+		return nil, err
 	}
 
-	cidr := ipNet.String()
 	log.Info().Str("component", approleComponentName).Msgf("resolved dynamic cidr list to %q", cidr)
 	return []string{cidr}, nil
+}
+
+func hostCidr(ip net.IP) (string, error) {
+	if ip.IsLoopback() {
+		return "", fmt.Errorf("local address %s is a loopback address, Vault may see a different address if the connection is proxied: use a static cidr resolver instead", ip)
+	}
+
+	bits := 8 * net.IPv6len
+	if ip4 := ip.To4(); ip4 != nil {
+		ip, bits = ip4, 8*net.IPv4len
+	}
+	ipNet := &net.IPNet{
+		IP:   ip,
+		Mask: net.CIDRMask(bits, bits),
+	}
+	return ipNet.String(), nil
 }

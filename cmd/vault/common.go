@@ -45,9 +45,9 @@ func getOpts(conf vault_config.Vault) ([]vault_common.ApproleSecretIdRotationOpt
 	var opts []vault_common.ApproleSecretIdRotationOpts
 	if conf.ApproleCidrLoginResolver != nil {
 		if conf.ApproleCidrLoginResolver.Type == "static" {
-			cidrs, ok := conf.ApproleCidrLoginResolver.Args.([]string)
-			if !ok {
-				return nil, errors.New("can not cast ApproleCidrLoginResolver.Args to []string")
+			cidrs, err := staticCidrs(conf.ApproleCidrLoginResolver.Args)
+			if err != nil {
+				return nil, fmt.Errorf("invalid args for static cidr_login_resolver: %w", err)
 			}
 			opts = append(opts, vault_common.WithStaticCidrResolver(cidrs))
 		}
@@ -58,9 +58,9 @@ func getOpts(conf vault_config.Vault) ([]vault_common.ApproleSecretIdRotationOpt
 
 	if conf.ApproleCidrTokenResolver != nil {
 		if conf.ApproleCidrTokenResolver.Type == "static" {
-			cidrs, ok := conf.ApproleCidrTokenResolver.Args.([]string)
-			if !ok {
-				return nil, errors.New("can not cast ApproleCidrTokenResolver.Args to []string")
+			cidrs, err := staticCidrs(conf.ApproleCidrTokenResolver.Args)
+			if err != nil {
+				return nil, fmt.Errorf("invalid args for static cidr_token_resolver: %w", err)
 			}
 			opts = append(opts, vault_common.WithStaticCidrTokenResolver(cidrs))
 		}
@@ -70,6 +70,26 @@ func getOpts(conf vault_config.Vault) ([]vault_common.ApproleSecretIdRotationOpt
 	}
 
 	return opts, nil
+}
+
+// staticCidrs returns the cidrs configured for a static cidr resolver. YAML lists are decoded as []any.
+func staticCidrs(args any) ([]string, error) {
+	switch v := args.(type) {
+	case []string:
+		return v, nil
+	case []any:
+		cidrs := make([]string, 0, len(v))
+		for _, item := range v {
+			cidr, ok := item.(string)
+			if !ok {
+				return nil, fmt.Errorf("expected cidr to be a string, got %T", item)
+			}
+			cidrs = append(cidrs, cidr)
+		}
+		return cidrs, nil
+	default:
+		return nil, fmt.Errorf("expected a list of cidrs, got %T", args)
+	}
 }
 
 func buildVaultClient(clientId string, conf vault_config.Vault) error {
