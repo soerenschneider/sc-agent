@@ -132,11 +132,11 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 		return nil, err
 	}
 
-	log.Warn().Str("subcomponent", "auth-approle").Str("component", "vault").Err(err).Msg("secret_id is not usable, bootstrapping a new one")
 	wrappingToken, bootstrapErr := a.bootstrapper.WrappedSecretId(ctx, client)
 	if bootstrapErr != nil {
 		return nil, fmt.Errorf("%w, bootstrapping secret_id failed: %w", err, bootstrapErr)
 	}
+	log.Info().Str("subcomponent", "auth-approle").Str("component", "vault").Err(err).Msg("bootstrapped new secret_id as the configured one is not usable")
 
 	secretIDValue, err = a.unwrapSecretID(ctx, client, wrappingToken)
 	if err != nil {
@@ -211,12 +211,13 @@ func (a *AppRoleAuth) unwrapSecretID(ctx context.Context, client *api.Client, wr
 		return "", fmt.Errorf("unable to unwrap response wrapping token: secret_id not found in response")
 	}
 
-	// write back unwrapped secret_id to file so it can be consumed by multiple clients
+	// write back unwrapped secret_id to file so it can be consumed by multiple clients. Failing to do so is an error,
+	// otherwise the secret_id would be lost and a new one would be needed for the next login.
 	if a.secretIDFile != "" {
 		log.Info().Str("component", "vault").Str("secret_id_file", a.secretIDFile).Msg("Writing unwrapped secret_id to file")
 		data := []byte(secretIDValue)
 		if err := os.WriteFile(a.secretIDFile, data, 0600); err != nil {
-			log.Error().Str("component", "vault").Err(err).Msg("could not write unwrapped secret_id to file")
+			return "", fmt.Errorf("could not write unwrapped secret_id to file: %w", err)
 		}
 	} else if a.secretIDEnv != "" {
 		// store back unwrapped secret_id so it can be consumed by multiple clients

@@ -10,8 +10,10 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"filippo.io/age"
 	"filippo.io/age/armor"
@@ -61,6 +63,12 @@ type fakeApproleCourier struct {
 	recipient age.Recipient
 	t         *testing.T
 
+	// challengeStatus and secretIdStatus make the endpoints fail with the given status
+	challengeStatus int
+	secretIdStatus  int
+	// secretIdDelay delays the response after the secret_id was created
+	secretIdDelay time.Duration
+
 	mutex      sync.Mutex
 	challenges int
 	secretIds  int
@@ -72,6 +80,10 @@ func (f *fakeApproleCourier) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Path {
 	case "/v1/auth/challenge":
+		if f.challengeStatus != 0 {
+			writeJSON(w, f.challengeStatus, map[string]any{"errors": []string{"challenge failed"}})
+			return
+		}
 		var req map[string]string
 		_ = json.NewDecoder(r.Body).Decode(&req)
 		if req["machine_id"] != testMachineId {
@@ -91,7 +103,12 @@ func (f *fakeApproleCourier) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusForbidden, map[string]any{"errors": []string{"machine is not authorized for this role"}})
 			return
 		}
+		if f.secretIdStatus != 0 {
+			writeJSON(w, f.secretIdStatus, map[string]any{"errors": []string{"secret_id failed"}})
+			return
+		}
 		f.secretIds++
+		time.Sleep(f.secretIdDelay)
 		writeJSON(w, http.StatusCreated, map[string]any{
 			"encrypted_wrap_token": map[string]string{"format": "age-armor", "value": ageEncrypt(f.t, f.recipient, testWrapToken)},
 		})
@@ -333,5 +350,106 @@ func TestWrappedSecretId_Backoff(t *testing.T) {
 	env.bootstrapper.Reset()
 	if _, err := env.bootstrapper.WrappedSecretId(context.Background(), env.client); err != nil {
 		t.Fatalf("expected attempt after reset to succeed, got %v", err)
+	}
+}
+
+func TestWrappedSecretId_DelayAfterFailure(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(env *testEnv)
+		// retrySoon is set if the failure is expected to be retried after the short retry delay
+		retrySoon bool
+	}{
+		{
+			name: "approle-courier unreachable",
+			setup: func(env *testEnv) {
+				server := httptest.NewServer(http.NotFoundHandler())
+				server.Close()
+				env.bootstrapper.address = server.URL
+			},
+			retrySoon: true,
+		},
+		{
+			name:      "challenge server error",
+			setup:     func(env *testEnv) { env.bootstrap.challengeStatus = http.StatusServiceUnavailable },
+			retrySoon: true,
+		},
+		{
+			name:      "challenge rate limited",
+			setup:     func(env *testEnv) { env.bootstrap.challengeStatus = http.StatusTooManyRequests },
+			retrySoon: true,
+		},
+		{
+			name:  "unknown machine",
+			setup: func(env *testEnv) { env.bootstrapper.machineId = "unknown" },
+		},
+		{
+			name:      "secret_id server error",
+			setup:     func(env *testEnv) { env.bootstrap.secretIdStatus = http.StatusBadGateway },
+			retrySoon: true,
+		},
+		{
+			name:  "secret_id forbidden",
+			setup: func(env *testEnv) { env.bootstrap.secretIdStatus = http.StatusForbidden },
+		},
+		{
+			name: "secret_id response lost",
+			setup: func(env *testEnv) {
+				env.bootstrap.secretIdDelay = 200 * time.Millisecond
+				env.bootstrapper.httpClient.Timeout = 50 * time.Millisecond
+			},
+		},
+		{
+			name:  "unexpected creation_path",
+			setup: func(env *testEnv) { env.vault.creationPath = "secret/data/something-else" },
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := newTestEnv(t)
+			now := time.Date(2026, 10, 23, 15, 0, 0, 0, time.UTC)
+			env.bootstrapper.now = func() time.Time { return now }
+			tt.setup(env)
+
+			if _, err := env.bootstrapper.WrappedSecretId(context.Background(), env.client); err == nil {
+				t.Fatal("expected bootstrapping to fail")
+			}
+
+			wantDelay, wantBackoff, wantRetryDelay := bootstrapMinBackoff, 2*bootstrapMinBackoff, bootstrapMinRetryDelay
+			if tt.retrySoon {
+				wantDelay, wantBackoff, wantRetryDelay = bootstrapMinRetryDelay, bootstrapMinBackoff, 2*bootstrapMinRetryDelay
+			}
+			if got := env.bootstrapper.nextAttempt.Sub(now); got != wantDelay {
+				t.Errorf("expected next attempt in %v, got %v", wantDelay, got)
+			}
+			if env.bootstrapper.backoff != wantBackoff {
+				t.Errorf("expected backoff %v, got %v", wantBackoff, env.bootstrapper.backoff)
+			}
+			if env.bootstrapper.retryDelay != wantRetryDelay {
+				t.Errorf("expected retry delay %v, got %v", wantRetryDelay, env.bootstrapper.retryDelay)
+			}
+
+			_, err := env.bootstrapper.WrappedSecretId(context.Background(), env.client)
+			if !errors.Is(err, ErrBootstrapBackoff) || !strings.Contains(err.Error(), "last attempt failed") {
+				t.Fatalf("expected ErrBootstrapBackoff including the last error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestLogin_FailsIfSecretIdFileIsNotWritable(t *testing.T) {
+	env := newTestEnv(t)
+	env.secretIdFile = filepath.Join(t.TempDir(), "missing-dir", "secret-id")
+	a := env.appRoleAuth(t)
+
+	if _, err := a.Login(context.Background(), env.client); err == nil {
+		t.Fatal("expected login to fail")
+	}
+	if _, err := a.Login(context.Background(), env.client); !errors.Is(err, ErrBootstrapBackoff) {
+		t.Fatalf("expected ErrBootstrapBackoff, got %v", err)
+	}
+	if env.bootstrap.secretIds != 1 {
+		t.Fatalf("expected exactly one bootstrapped secret_id, got %d", env.bootstrap.secretIds)
 	}
 }

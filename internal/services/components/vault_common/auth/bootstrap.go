@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,17 +18,25 @@ import (
 	"filippo.io/age"
 	"filippo.io/age/armor"
 	"github.com/hashicorp/vault/api"
+	"github.com/rs/zerolog/log"
 	"github.com/soerenschneider/sc-agent/internal/metrics"
 )
 
 const (
 	defaultBootstrapWrapTtl = 2 * time.Minute
 	bootstrapHttpTimeout    = 30 * time.Second
-	// bootstrapMinBackoff and bootstrapMaxBackoff bound the delay between bootstrap attempts. Every attempt creates a
-	// new secret_id in Vault, so it must not run on every (failed) login.
+	// bootstrapDialTimeout is shorter than bootstrapHttpTimeout, so an unreachable approle-courier is recognized as
+	// such instead of as a request that timed out after it may have been processed.
+	bootstrapDialTimeout = 10 * time.Second
+	// bootstrapMinBackoff and bootstrapMaxBackoff bound the delay after attempts that may have created a secret_id in
+	// Vault or failed permanently, so a broken setup does not flood Vault with secret_ids.
 	bootstrapMinBackoff = time.Minute
 	bootstrapMaxBackoff = time.Hour
-	maxResponseSize     = 64 * 1024
+	// bootstrapMinRetryDelay and bootstrapMaxRetryDelay bound the delay after transient failures that happened before
+	// a secret_id could have been created, e.g. while approle-courier is unreachable.
+	bootstrapMinRetryDelay = time.Minute
+	bootstrapMaxRetryDelay = 5 * time.Minute
+	maxResponseSize        = 64 * 1024
 )
 
 var ErrBootstrapBackoff = errors.New("bootstrapping secret_id is backing off")
@@ -48,6 +57,7 @@ type SecretIdBootstrapper struct {
 
 	mutex       sync.Mutex
 	backoff     time.Duration
+	retryDelay  time.Duration
 	nextAttempt time.Time
 	// lastErr is the error of the last failed attempt, it is returned while backing off so the cause is not lost
 	lastErr error
@@ -79,8 +89,9 @@ func NewSecretIdBootstrapper(address, machineId, mount, roleName, ageIdentityFil
 		roleName:   roleName,
 		wrapTtl:    defaultBootstrapWrapTtl,
 		identities: identities,
-		httpClient: &http.Client{Timeout: bootstrapHttpTimeout},
+		httpClient: newBootstrapHttpClient(),
 		backoff:    bootstrapMinBackoff,
+		retryDelay: bootstrapMinRetryDelay,
 		now:        time.Now,
 	}
 
@@ -110,6 +121,12 @@ func WithBootstrapMetricsLabel(secretIdFile string) BootstrapOption {
 	}
 }
 
+func newBootstrapHttpClient() *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = (&net.Dialer{Timeout: bootstrapDialTimeout, KeepAlive: 30 * time.Second}).DialContext
+	return &http.Client{Timeout: bootstrapHttpTimeout, Transport: transport}
+}
+
 func readAgeIdentities(file string) ([]age.Identity, error) {
 	f, err := os.Open(file)
 	if err != nil {
@@ -125,8 +142,9 @@ func readAgeIdentities(file string) ([]age.Identity, error) {
 }
 
 // WrappedSecretId fetches a new response-wrapped secret_id and returns the wrapping token after verifying with Vault
-// that it wraps a secret_id of the configured role. Attempts are rate limited with an exponential backoff that is
-// reset by Reset, ErrBootstrapBackoff is returned while backing off.
+// that it wraps a secret_id of the configured role. Attempts are rate limited, ErrBootstrapBackoff is returned while
+// backing off. Transient failures that can not have created a secret_id are retried after a short delay, all other
+// attempts are followed by an exponential backoff that is reset by Reset.
 func (b *SecretIdBootstrapper) WrappedSecretId(ctx context.Context, client *api.Client) (string, error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
@@ -138,13 +156,19 @@ func (b *SecretIdBootstrapper) WrappedSecretId(ctx context.Context, client *api.
 		}
 		return "", fmt.Errorf("%w until %s", ErrBootstrapBackoff, b.nextAttempt.Format(time.RFC3339))
 	}
-	b.nextAttempt = now.Add(b.backoff)
-	b.backoff = min(2*b.backoff, bootstrapMaxBackoff)
 
-	token, reason, err := b.wrappedSecretId(ctx, client)
+	log.Info().Str("subcomponent", "auth-approle").Str("component", "vault").Msg("bootstrapping new secret_id")
+	token, failure, err := b.wrappedSecretId(ctx, client)
 	b.lastErr = err
+	if err != nil && failure.retrySoon {
+		b.nextAttempt = now.Add(b.retryDelay)
+		b.retryDelay = min(2*b.retryDelay, bootstrapMaxRetryDelay)
+	} else {
+		b.nextAttempt = now.Add(b.backoff)
+		b.backoff = min(2*b.backoff, bootstrapMaxBackoff)
+	}
 	if err != nil {
-		metrics.SecretIdBootstrapErrors.WithLabelValues(b.metricsLabel, reason).Inc()
+		metrics.SecretIdBootstrapErrors.WithLabelValues(b.metricsLabel, failure.reason).Inc()
 		return "", err
 	}
 	metrics.SecretIdBootstraps.WithLabelValues(b.metricsLabel).Inc()
@@ -157,6 +181,7 @@ func (b *SecretIdBootstrapper) Reset() {
 	defer b.mutex.Unlock()
 
 	b.backoff = bootstrapMinBackoff
+	b.retryDelay = bootstrapMinRetryDelay
 	b.nextAttempt = time.Time{}
 	b.lastErr = nil
 }
@@ -177,15 +202,33 @@ type bootstrapErrorResponse struct {
 	Errors []string `json:"errors"`
 }
 
-// wrappedSecretId returns the wrapping token, or a short reason for the metrics and an error.
-func (b *SecretIdBootstrapper) wrappedSecretId(ctx context.Context, client *api.Client) (string, string, error) {
+// statusError is returned if approle-courier rejected a request.
+type statusError struct {
+	code   int
+	errors []string
+}
+
+func (e *statusError) Error() string {
+	return fmt.Sprintf("approle-courier returned status %d: %s", e.code, strings.Join(e.errors, ", "))
+}
+
+// bootstrapFailure describes a failed bootstrap attempt.
+type bootstrapFailure struct {
+	// reason is a short description for the metrics
+	reason string
+	// retrySoon is set if the attempt failed transiently before a secret_id could have been created
+	retrySoon bool
+}
+
+// wrappedSecretId returns the wrapping token, or a description of the failure and an error.
+func (b *SecretIdBootstrapper) wrappedSecretId(ctx context.Context, client *api.Client) (string, bootstrapFailure, error) {
 	var challenge challengeResponse
 	if err := b.post(ctx, "/v1/auth/challenge", "", nil, map[string]string{"machine_id": b.machineId}, &challenge); err != nil {
-		return "", "challenge", fmt.Errorf("could not request challenge: %w", err)
+		return "", bootstrapFailure{"challenge", isTransient(err, false)}, fmt.Errorf("could not request challenge: %w", err)
 	}
 	bearer, err := b.decrypt(challenge.Challenge.Value)
 	if err != nil {
-		return "", "decrypt_challenge", fmt.Errorf("could not decrypt challenge: %w", err)
+		return "", bootstrapFailure{reason: "decrypt_challenge"}, fmt.Errorf("could not decrypt challenge: %w", err)
 	}
 
 	path := fmt.Sprintf("/v1/approle/roles/%s/secret-id", url.PathEscape(b.roleName))
@@ -193,17 +236,42 @@ func (b *SecretIdBootstrapper) wrappedSecretId(ctx context.Context, client *api.
 	body := map[string]any{"wrap_ttl": int(b.wrapTtl.Seconds())}
 	var resp wrappedSecretIdResponse
 	if err := b.post(ctx, path, bearer, query, body, &resp); err != nil {
-		return "", "secret_id", fmt.Errorf("could not request wrapped secret_id: %w", err)
+		return "", bootstrapFailure{"secret_id", isTransient(err, true)}, fmt.Errorf("could not request wrapped secret_id: %w", err)
 	}
 	wrappingToken, err := b.decrypt(resp.EncryptedWrapToken.Value)
 	if err != nil {
-		return "", "decrypt_wrap_token", fmt.Errorf("could not decrypt wrapping token: %w", err)
+		return "", bootstrapFailure{reason: "decrypt_wrap_token"}, fmt.Errorf("could not decrypt wrapping token: %w", err)
 	}
 
 	if reason, err := b.verifyWrappingToken(ctx, client, wrappingToken); err != nil {
-		return "", reason, err
+		return "", bootstrapFailure{reason: reason}, err
 	}
-	return wrappingToken, "", nil
+	return wrappingToken, bootstrapFailure{}, nil
+}
+
+// isTransient reports whether a failed request to approle-courier may succeed when retried soon and can not have
+// created a secret_id. createsSecretId is set for requests that create a secret_id once approle-courier processes them.
+func isTransient(err error, createsSecretId bool) bool {
+	// approle-courier rejected the request without creating a secret_id
+	var statusErr *statusError
+	if errors.As(err, &statusErr) {
+		return statusErr.code >= http.StatusInternalServerError || statusErr.code == http.StatusTooManyRequests
+	}
+
+	// the request never reached approle-courier
+	var opErr *net.OpError
+	if errors.As(err, &opErr) && opErr.Op == "dial" {
+		return true
+	}
+
+	// the request may have been processed by approle-courier but the response got lost
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return !createsSecretId
+	}
+
+	// the response could not be read or parsed
+	return false
 }
 
 // verifyWrappingToken makes sure the wrapping token was issued by Vault for a secret_id of the configured role before
@@ -261,7 +329,7 @@ func (b *SecretIdBootstrapper) post(ctx context.Context, path, bearer string, qu
 	if resp.StatusCode != http.StatusCreated {
 		var errResp bootstrapErrorResponse
 		_ = json.Unmarshal(data, &errResp)
-		return fmt.Errorf("approle-courier returned status %d: %s", resp.StatusCode, strings.Join(errResp.Errors, ", "))
+		return &statusError{code: resp.StatusCode, errors: errResp.Errors}
 	}
 	return json.Unmarshal(data, out)
 }
