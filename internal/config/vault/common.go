@@ -10,10 +10,12 @@ const (
 )
 
 type Vault struct {
-	Address                  string                    `yaml:"address" env:"VAULT_ADDR" validate:"omitempty,http_url"`
-	AuthMethod               string                    `yaml:"auth_method" validate:"required,oneof=token approle"`
-	Token                    string                    `yaml:"token" env:"VAULT_TOKEN" validate:"required_if=AuthMethod token"`
-	RoleId                   string                    `yaml:"role_id" validate:"required_if=AuthMethod approle"`
+	Address    string `yaml:"address" env:"VAULT_ADDR" validate:"omitempty,http_url"`
+	AuthMethod string `yaml:"auth_method" validate:"required,oneof=token approle"`
+	Token      string `yaml:"token" env:"VAULT_TOKEN" validate:"required_if=AuthMethod token"`
+	RoleId     string `yaml:"role_id" validate:"required_if=AuthMethod approle"`
+	// RoleName is the name of the approle role, it defaults to the role_id.
+	RoleName                 string                    `yaml:"role_name"`
 	SecretIdFile             string                    `yaml:"secret_id_file" validate:"required_if=AuthMethod approle"`
 	SecretIdFileUser         string                    `yaml:"secret_id_file_user"`
 	MountApprole             string                    `yaml:"approle_mount" validate:"required_if=AuthMethod approle"`
@@ -28,7 +30,7 @@ type VaultBootstrap struct {
 	Address string `yaml:"address" validate:"required,http_url"`
 	// MachineId defaults to the hostname.
 	MachineId string `yaml:"machine_id"`
-	// RoleName defaults to the role_id.
+	// RoleName defaults to the role_name of the Vault client.
 	RoleName        string `yaml:"role_name"`
 	AgeIdentityFile string `yaml:"age_identity_file" validate:"required,file"`
 	WrapTtl         string `yaml:"wrap_ttl" validate:"omitempty,duration"`
@@ -37,6 +39,14 @@ type VaultBootstrap struct {
 type VaultApproleCidrResolver struct {
 	Type string `yaml:"type" validate:"required,oneof=dynamic static"`
 	Args any    `yaml:"args"`
+}
+
+// ApproleRoleName returns the name of the approle role, which defaults to the role_id.
+func (conf Vault) ApproleRoleName() string {
+	if conf.RoleName != "" {
+		return conf.RoleName
+	}
+	return conf.RoleId
 }
 
 func (conf *Vault) UnmarshalYAML(node *yaml.Node) error {

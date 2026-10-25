@@ -75,20 +75,22 @@ If the `secret_id_file` is missing, contains a wrapping token that can not be un
 `secret_id`, a new response-wrapped `secret_id` can be fetched from [approle-courier](https://github.com/soerenschneider/approle-courier).
 The agent authenticates using an age-encrypted challenge, so its age identity must be registered with approle-courier.
 Before unwrapping, the wrapping token's `creation_path` is verified. Attempts are rate limited with an exponential
-backoff (1m up to 1h), afterwards the `secret_id` is rotated as usual.
+backoff (1m up to 1h). Transient failures before a `secret_id` could have been created, e.g. while approle-courier is
+unreachable, are retried sooner (1m up to 5m). Afterwards the `secret_id` is rotated as usual.
 
 ```yaml
 vault:
   default:
     auth_method: approle
-    role_id: demo
+    role_id: 3c5e8a0b-1f2d-4e6a-9b7c-8d0e1f2a3b4c
+    role_name: demo         # optional, defaults to role_id
     approle_mount: approle
     secret_id_file: /etc/sc-agent/secret-id
     bootstrap:
       address: https://approle-courier.example.com
       age_identity_file: /etc/sc-agent/age.key
       machine_id: node-42   # optional, defaults to the hostname
-      role_name: demo       # optional, defaults to role_id
+      role_name: demo       # optional, defaults to the client's role_name
       wrap_ttl: 2m          # optional
 ```
 

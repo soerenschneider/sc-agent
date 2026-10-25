@@ -107,7 +107,7 @@ func (a *ApproleSecretIdRotatorService) ConditionallyRotateSecretId(cnf vault_co
 	if isWrapped {
 		log.Warn().Str(logComponent, "vault").Str(logSubComponent, approleComponentName).Str(logSecretIdFile, cnf.SecretIdFile).Str("id", a.approleIdentifier).Msg("Detected a wrapped secret_id, trying to rotate immediately")
 	} else {
-		secretIdInfo, err := a.client.Lookup(cnf.RoleId, secretId, isAccessor)
+		secretIdInfo, err := a.client.Lookup(cnf.ApproleRoleName(), secretId, isAccessor)
 		if err != nil && !errors.Is(err, errAlreadyExpired) {
 			log.Error().Str(logComponent, "vault").Str(logSubComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, cnf.SecretIdFile).Err(err).Msg("could not lookup secret_id")
 			return err
@@ -128,7 +128,7 @@ func (a *ApproleSecretIdRotatorService) ConditionallyRotateSecretId(cnf vault_co
 	}
 
 	log.Info().Str(logComponent, "vault").Str(logSubComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, cnf.SecretIdFile).Msg("generating new secret_id")
-	newSecretId, err := a.client.GenerateSecretId(cnf.RoleId)
+	newSecretId, err := a.client.GenerateSecretId(cnf.ApproleRoleName())
 	if err != nil {
 		log.Error().Str(logComponent, "vault").Str(logSubComponent, approleComponentName).Str(logSecretIdFile, cnf.SecretIdFile).Err(err).Msg("could not generate new secret_id")
 		metrics.SecretIdRotationErrors.WithLabelValues(cnf.SecretIdFile, "generate_secret_id").Inc()
@@ -141,7 +141,7 @@ func (a *ApproleSecretIdRotatorService) ConditionallyRotateSecretId(cnf vault_co
 		return err
 	}
 
-	err = a.client.DestroySecretId(cnf.RoleId, secretId, isAccessor)
+	err = a.client.DestroySecretId(cnf.ApproleRoleName(), secretId, isAccessor)
 	if err != nil {
 		log.Error().Str(logComponent, "vault").Str(logSubComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, cnf.SecretIdFile).Err(err).Msg("could not destroy secret_id")
 		metrics.SecretIdRotationErrors.WithLabelValues(cnf.SecretIdFile, "destroy_secret_id").Inc()

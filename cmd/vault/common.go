@@ -231,7 +231,7 @@ func buildSecretIdBootstrapper(conf vault_config.Vault) (*auth.SecretIdBootstrap
 
 	roleName := conf.Bootstrap.RoleName
 	if roleName == "" {
-		roleName = conf.RoleId
+		roleName = conf.ApproleRoleName()
 	}
 
 	opts := []auth.BootstrapOption{auth.WithBootstrapMetricsLabel(conf.SecretIdFile)}
