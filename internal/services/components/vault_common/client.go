@@ -15,6 +15,7 @@ type VaultCommon struct {
 
 	tokenRenewer           *TokenRenewer
 	approleSecretIdRotator *ApproleSecretIdRotatorService
+	rotationOnly           bool
 }
 
 func NewVaultClient(auth api.AuthMethod, client *api.Client, renewer *TokenRenewer, approleSecretIdRotator *ApproleSecretIdRotatorService) (*VaultCommon, error) {
@@ -33,6 +34,26 @@ func NewVaultClient(auth api.AuthMethod, client *api.Client, renewer *TokenRenew
 		tokenRenewer:           renewer,
 		approleSecretIdRotator: approleSecretIdRotator,
 	}, nil
+}
+
+// NewRotationOnlyVaultClient returns a client that only rotates its secret_id. It does not keep a token, the rotator
+// logs in on demand.
+func NewRotationOnlyVaultClient(auth api.AuthMethod, client *api.Client, approleSecretIdRotator *ApproleSecretIdRotatorService) (*VaultCommon, error) {
+	if approleSecretIdRotator == nil {
+		return nil, errors.New("empty approle secret_id rotator passed")
+	}
+
+	ret, err := NewVaultClient(auth, client, nil, approleSecretIdRotator)
+	if err != nil {
+		return nil, err
+	}
+	ret.rotationOnly = true
+	return ret, nil
+}
+
+// RotationOnly returns whether the client only rotates its secret_id and must not be used otherwise.
+func (v *VaultCommon) RotationOnly() bool {
+	return v.rotationOnly
 }
 
 func (v *VaultCommon) Client() *api.Client {

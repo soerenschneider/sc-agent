@@ -115,6 +115,15 @@ func buildVaultClient(clientId string, conf vault_config.Vault) error {
 		return err
 	}
 
+	if conf.RotationOnly {
+		client, err := buildRotationOnlyClient(clientId, conf, vaultClient, auth)
+		if err != nil {
+			return err
+		}
+		clients[clientId] = client
+		return nil
+	}
+
 	tokenRenewer, err := vault_common.NewTokenRenewer(vaultClient, auth, clientId)
 	if err != nil {
 		return err
@@ -145,13 +154,35 @@ func buildVaultClient(clientId string, conf vault_config.Vault) error {
 	return nil
 }
 
+func buildRotationOnlyClient(clientId string, conf vault_config.Vault, vaultClient *vault.Client, auth vault.AuthMethod) (*vault_common.VaultCommon, error) {
+	opts, err := getOpts(conf)
+	if err != nil {
+		return nil, err
+	}
+	approleClient, err := vault_common.NewClient(vaultClient.Logical(), conf.MountApprole, opts...)
+	if err != nil {
+		return nil, err
+	}
+	secretIdRotator, err := vault_common.NewApproleUpdater(approleClient, clientId, &conf, vault_common.WithOnDemandLogin(vaultClient, auth))
+	if err != nil {
+		return nil, err
+	}
+	return vault_common.NewRotationOnlyVaultClient(auth, vaultClient, secretIdRotator)
+}
+
 // StartTokenRenewal starts logging in and renewing tokens for all Vault clients. After a client has successfully
-// logged in, its approle secret_id rotation is started.
+// logged in, its approle secret_id rotation is started. Rotation-only clients don't keep a token, their rotation is
+// started immediately.
 func StartTokenRenewal(ctx context.Context) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	for _, client := range clients {
+		if client.RotationOnly() {
+			go client.StartApproleSecretIdRotation(ctx)
+			continue
+		}
+
 		go client.StartTokenRenewer(ctx)
 		go func() {
 			select {
@@ -169,6 +200,9 @@ func WaitForLogin(ctx context.Context, clientId string) error {
 	client := getVaultClient(clientId)
 	if client == nil {
 		return fmt.Errorf("vault client %q not found", clientId)
+	}
+	if client.RotationOnly() {
+		return fmt.Errorf("vault client %q is rotation-only and can not be used by other components", clientId)
 	}
 
 	select {

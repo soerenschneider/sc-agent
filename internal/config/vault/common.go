@@ -22,6 +22,9 @@ type Vault struct {
 	ApproleCidrTokenResolver *VaultApproleCidrResolver `yaml:"cidr_token_resolver"`
 	ApproleCidrLoginResolver *VaultApproleCidrResolver `yaml:"cidr_login_resolver"`
 	Bootstrap                *VaultBootstrap           `yaml:"bootstrap"`
+	// RotationOnly clients only rotate their secret_id: they log in for each rotation check instead of keeping a token
+	// and can not be used by other components.
+	RotationOnly bool `yaml:"rotation_only"`
 }
 
 // VaultBootstrap configures fetching a wrapped secret_id from approle-courier if the secret_id file is missing or the

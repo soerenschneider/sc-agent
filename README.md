@@ -94,6 +94,34 @@ vault:
       wrap_ttl: 2m          # optional
 ```
 
+### Managing secret_ids of other AppRoles
+Additional `vault` clients can manage the `secret_id`s of other AppRoles on the same Vault instance, e.g. for services
+running on the same machine. Each AppRole rotates its own `secret_id`, so no AppRole needs permissions for other
+AppRoles. Clients with `rotation_only: true` don't keep a token: they log in for each check and revoke the token
+afterwards. Checks are scheduled based on the `secret_id`'s remaining lifetime (10m up to 24h), so logins are rare.
+Rotation-only clients can not be used by other components and need the `default` policy (or permission for
+`auth/token/revoke-self`). A short `token_ttl` for these AppRoles is recommended.
+
+```yaml
+vault:
+  default:
+    role_id: sc-agent
+    secret_id_file: /etc/sc-agent/secret-id
+  restic:
+    role_id: 7a1c2e3f-4b5d-6e7f-8a9b-0c1d2e3f4a5b
+    role_name: restic
+    secret_id_file: /etc/restic/vault-secret-id
+    secret_id_file_user: restic
+    rotation_only: true
+```
+
+As checks can be up to 24h apart, alert on the `secret_id`'s expiration instead of its remaining lifetime in percent,
+which is only updated by successful checks:
+
+```
+sc_agent_vault_approle_secret_id_expiration_timestamp_seconds - time() < 3 * 86400
+```
+
 
 ## Components
 

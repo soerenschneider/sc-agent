@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"sync"
@@ -28,6 +29,7 @@ func Validate(s any) error {
 		}
 
 		validate.RegisterStructValidation(validateVault, vault.Vault{})
+		validate.RegisterStructValidation(validateVaultClients, Config{})
 	})
 
 	return validate.Struct(s)
@@ -38,15 +40,61 @@ func validateDuration(fl validator.FieldLevel) bool {
 	return err == nil
 }
 
-// validateVault requires the secret_id file to exist, unless it can be bootstrapped.
+// validateVault requires the secret_id file to exist, unless it can be bootstrapped, and rotation-only clients to use
+// approle auth.
 func validateVault(sl validator.StructLevel) {
 	conf, ok := sl.Current().Interface().(vault.Vault)
-	if !ok || conf.AuthMethod != "approle" || conf.Bootstrap != nil || conf.SecretIdFile == "" {
+	if !ok {
+		return
+	}
+	if conf.RotationOnly && conf.AuthMethod != "approle" {
+		sl.ReportError(conf.RotationOnly, "RotationOnly", "RotationOnly", "rotation_only_requires_approle", "")
+	}
+	if conf.AuthMethod != "approle" || conf.Bootstrap != nil || conf.SecretIdFile == "" {
 		return
 	}
 
 	if info, err := os.Stat(conf.SecretIdFile); err != nil || info.IsDir() {
 		sl.ReportError(conf.SecretIdFile, "SecretIdFile", "SecretIdFile", "file", "")
+	}
+}
+
+// validateVaultClients makes sure components don't use rotation-only Vault clients and that no two approle clients
+// share a secret_id file, as their rotators would overwrite each other's secret_id.
+func validateVaultClients(sl validator.StructLevel) {
+	conf, ok := sl.Current().Interface().(Config)
+	if !ok {
+		return
+	}
+
+	secretIdFiles := map[string]string{}
+	for id, client := range conf.Vault {
+		if client.AuthMethod != "approle" || client.SecretIdFile == "" {
+			continue
+		}
+		if other, found := secretIdFiles[client.SecretIdFile]; found {
+			sl.ReportError(client.SecretIdFile, fmt.Sprintf("Vault[%s].SecretIdFile", id), "SecretIdFile", "unique_secret_id_file", other)
+		}
+		secretIdFiles[client.SecretIdFile] = id
+	}
+
+	vaultIds := map[string]string{}
+	if conf.Acme != nil {
+		vaultIds["Acme"] = conf.Acme.VaultId
+	}
+	if conf.SecretsReplication != nil {
+		vaultIds["SecretsReplication"] = conf.SecretsReplication.VaultId
+	}
+	if conf.SshSigner != nil {
+		vaultIds["SshSigner"] = conf.SshSigner.VaultId
+	}
+	if conf.X509Pki != nil {
+		vaultIds["X509Pki"] = conf.X509Pki.VaultId
+	}
+	for component, vaultId := range vaultIds {
+		if client, found := conf.Vault[vaultId]; found && client.RotationOnly {
+			sl.ReportError(vaultId, component+".VaultId", "VaultId", "not_rotation_only", "")
+		}
 	}
 }
 

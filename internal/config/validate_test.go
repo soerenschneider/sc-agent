@@ -92,6 +92,15 @@ func TestValidate_Vault(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:  "rotation-only approle",
+			vault: approle(func(v *vault.Vault) { v.RotationOnly = true }),
+		},
+		{
+			name:    "rotation-only token",
+			vault:   vault.Vault{AuthMethod: "token", Token: "token", RotationOnly: true},
+			wantErr: true,
+		},
+		{
 			name: "invalid cidr resolver",
 			vault: approle(func(v *vault.Vault) {
 				v.ApproleCidrLoginResolver = &vault.VaultApproleCidrResolver{Type: "magic"}
@@ -104,6 +113,77 @@ func TestValidate_Vault(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			conf := Config{Vault: map[string]vault.Vault{"default": tt.vault}}
 			err := Validate(conf)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidate_VaultClients(t *testing.T) {
+	dir := t.TempDir()
+	newSecretIdFile := func(name string) string {
+		file := filepath.Join(dir, name)
+		if err := os.WriteFile(file, []byte("secret"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		return file
+	}
+	defaultSecretIdFile := newSecretIdFile("default")
+	resticSecretIdFile := newSecretIdFile("restic")
+
+	approle := func(secretIdFile string, rotationOnly bool) vault.Vault {
+		return vault.Vault{
+			Address:      "https://vault.example.com",
+			AuthMethod:   "approle",
+			RoleId:       "role",
+			SecretIdFile: secretIdFile,
+			MountApprole: "approle",
+			RotationOnly: rotationOnly,
+		}
+	}
+
+	tests := []struct {
+		name    string
+		conf    Config
+		wantErr bool
+	}{
+		{
+			name: "component uses regular client",
+			conf: Config{
+				Vault: map[string]vault.Vault{
+					"default": approle(defaultSecretIdFile, false),
+					"restic":  approle(resticSecretIdFile, true),
+				},
+				SshSigner: &vault.SshPki{VaultId: "default", MountPath: "ssh"},
+			},
+		},
+		{
+			name: "component uses rotation-only client",
+			conf: Config{
+				Vault: map[string]vault.Vault{
+					"default": approle(defaultSecretIdFile, false),
+					"restic":  approle(resticSecretIdFile, true),
+				},
+				SshSigner: &vault.SshPki{VaultId: "restic", MountPath: "ssh"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "shared secret_id file",
+			conf: Config{
+				Vault: map[string]vault.Vault{
+					"default": approle(defaultSecretIdFile, false),
+					"restic":  approle(defaultSecretIdFile, true),
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := Validate(tt.conf)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}

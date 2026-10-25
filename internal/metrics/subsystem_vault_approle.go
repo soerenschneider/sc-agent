@@ -22,6 +22,13 @@ var (
 		Help:      "Expiration date of the token",
 	}, []string{"secret_id_file"})
 
+	SecretIdExpiration = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: namespace,
+		Subsystem: subsystemVaultApprole,
+		Name:      "secret_id_expiration_timestamp_seconds",
+		Help:      "Expiration of the secret_id as unix timestamp, absent for secret_ids without expiration",
+	}, []string{"secret_id_file"})
+
 	SecretIdRotationErrors = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: namespace,
 		Subsystem: subsystemVaultApprole,
