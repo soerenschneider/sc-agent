@@ -12,9 +12,9 @@ func (s *HttpServer) PowerPostAction(ctx context.Context, request PowerPostActio
 
 	var err error
 	switch request.Params.Action {
-	case Reboot:
+	case PowerPostActionParamsActionReboot:
 		err = s.services.PowerStatus.Reboot()
-	case Shutdown:
+	case PowerPostActionParamsActionShutdown:
 		err = s.services.PowerStatus.Shutdown()
 	}
 
