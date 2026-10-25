@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"maps"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -14,7 +15,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/soerenschneider/sc-agent/internal/config/vault"
 	"github.com/soerenschneider/sc-agent/internal/sysinfo"
-	"golang.org/x/exp/maps"
 	"gopkg.in/yaml.v3"
 )
 
