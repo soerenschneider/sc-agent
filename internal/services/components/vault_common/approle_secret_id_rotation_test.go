@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -24,7 +26,10 @@ import (
 type fakeApproleClient struct {
 	info        *vault.SecretIdInfo
 	newInfo     *vault.SecretIdInfo
+	lookupErr   error
 	vaultClient *api.Client
+
+	destroyed []string
 
 	roleNames []string
 	tokens    []string
@@ -40,11 +45,15 @@ func (f *fakeApproleClient) record(roleName string) {
 
 func (f *fakeApproleClient) DestroySecretId(roleName, secretId string, isAccessor bool) error {
 	f.record(roleName)
+	f.destroyed = append(f.destroyed, secretId)
 	return nil
 }
 
 func (f *fakeApproleClient) Lookup(roleName, secretId string, isAccessor bool) (*vault.SecretIdInfo, error) {
 	f.record(roleName)
+	if f.lookupErr != nil {
+		return nil, f.lookupErr
+	}
 	info := f.info
 	if secretId == "new-secret-id" {
 		info = f.newInfo
@@ -292,6 +301,106 @@ func TestCheck_OnDemandLogin(t *testing.T) {
 			// deleting reports whether the series existed
 			if got := metrics.SecretIdExpiration.DeleteLabelValues(vaultConf.SecretIdFile); got != wantExpiration {
 				t.Errorf("expected expiration series to exist: %v, got %v", wantExpiration, got)
+			}
+		})
+	}
+}
+
+func newTestRotator(t *testing.T, client ApproleClient, fs afero.Fs, secretIdFile string) (*ApproleSecretIdRotatorService, vault_config.Vault) {
+	t.Helper()
+	conf := vault_config.Vault{RoleId: "restic", SecretIdFile: secretIdFile}
+	rotator, err := NewApproleUpdater(client, "restic", &conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rotator.fsImpl = fs
+	return rotator, conf
+}
+
+func TestConditionallyRotateSecretId_DestroysNewSecretIdIfWriteFails(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	if err := afero.WriteFile(fs, "/destroy-new/secret-id", []byte("old-secret-id"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	client := &fakeApproleClient{}
+	rotator, conf := newTestRotator(t, client, afero.NewReadOnlyFs(fs), "/destroy-new/secret-id")
+
+	if err := rotator.ConditionallyRotateSecretId(conf, false); err == nil {
+		t.Fatal("expected rotation to fail")
+	}
+	if client.generated != 1 {
+		t.Fatalf("expected a new secret_id to be generated, got %d", client.generated)
+	}
+	if len(client.destroyed) != 1 || client.destroyed[0] != "new-secret-id" {
+		t.Fatalf("expected only the new secret_id to be destroyed, got %v", client.destroyed)
+	}
+}
+
+func TestConditionallyRotateSecretId_CountsLookupErrors(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	if err := afero.WriteFile(fs, "/lookup-error/secret-id", []byte("old-secret-id"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	client := &fakeApproleClient{lookupErr: errors.New("permission denied")}
+	rotator, conf := newTestRotator(t, client, fs, "/lookup-error/secret-id")
+
+	if err := rotator.ConditionallyRotateSecretId(conf, false); err == nil {
+		t.Fatal("expected rotation to fail")
+	}
+	if got := testutil.ToFloat64(metrics.SecretIdRotationErrors.WithLabelValues(conf.SecretIdFile, "lookup")); got != 1 {
+		t.Fatalf("expected one lookup error, got %v", got)
+	}
+	if client.generated != 0 {
+		t.Fatalf("expected no secret_id to be generated, got %d", client.generated)
+	}
+}
+
+func TestWriteSecretIdFile(t *testing.T) {
+	tests := []struct {
+		name string
+		// existingMode is the mode of the existing secret_id file, 0 if there is none
+		existingMode os.FileMode
+		wantMode     os.FileMode
+	}{
+		{name: "new file", wantMode: 0600},
+		{name: "keeps mode of existing file", existingMode: 0640, wantMode: 0640},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			secretIdFile := filepath.Join(dir, "secret-id")
+			if tt.existingMode != 0 {
+				if err := os.WriteFile(secretIdFile, []byte("old-secret-id"), tt.existingMode); err != nil {
+					t.Fatal(err)
+				}
+				// not affected by the umask
+				if err := os.Chmod(secretIdFile, tt.existingMode); err != nil {
+					t.Fatal(err)
+				}
+			}
+			rotator, conf := newTestRotator(t, &fakeApproleClient{}, afero.NewOsFs(), secretIdFile)
+
+			if err := rotator.writeSecretIdFile("new-secret-id", conf); err != nil {
+				t.Fatalf("writeSecretIdFile() unexpected error: %v", err)
+			}
+
+			data, err := os.ReadFile(secretIdFile)
+			if err != nil || string(data) != "new-secret-id" {
+				t.Fatalf("expected new secret_id, got %q (%v)", data, err)
+			}
+			info, err := os.Stat(secretIdFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if info.Mode().Perm() != tt.wantMode {
+				t.Fatalf("expected mode %v, got %v", tt.wantMode, info.Mode().Perm())
+			}
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 1 {
+				t.Fatalf("expected no temporary files to be left, got %v", entries)
 			}
 		})
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -184,6 +185,7 @@ func (a *ApproleSecretIdRotatorService) conditionallyRotateSecretId(cnf vault_co
 		secretIdInfo, err := a.client.Lookup(cnf.ApproleRoleName(), secretId, isAccessor)
 		if err != nil && !errors.Is(err, errAlreadyExpired) {
 			log.Error().Str(logComponent, "vault").Str(logSubComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, cnf.SecretIdFile).Err(err).Msg("could not lookup secret_id")
+			metrics.SecretIdRotationErrors.WithLabelValues(cnf.SecretIdFile, "lookup").Inc()
 			return 0, err
 		}
 
@@ -210,6 +212,11 @@ func (a *ApproleSecretIdRotatorService) conditionallyRotateSecretId(cnf vault_co
 	if err := a.writeSecretIdFile(newSecretId, cnf); err != nil {
 		log.Error().Str(logComponent, "vault").Str(logSubComponent, approleComponentName).Str(logSecretIdFile, cnf.SecretIdFile).Err(err).Msg("could not write new secret_id to file - not going to destroy old secret_id")
 		metrics.SecretIdRotationErrors.WithLabelValues(cnf.SecretIdFile, "write_file").Inc()
+		// nobody knows the new secret_id, don't leave it valid until it expires
+		if destroyErr := a.client.DestroySecretId(cnf.ApproleRoleName(), newSecretId, false); destroyErr != nil {
+			log.Error().Str(logComponent, "vault").Str(logSubComponent, approleComponentName).Str("id", a.approleIdentifier).Str(logSecretIdFile, cnf.SecretIdFile).Err(destroyErr).Msg("could not destroy unused new secret_id")
+			metrics.SecretIdRotationErrors.WithLabelValues(cnf.SecretIdFile, "destroy_secret_id").Inc()
+		}
 		return 0, err
 	}
 
@@ -257,9 +264,15 @@ func (a *ApproleSecretIdRotatorService) untilRotationDue(info vault.SecretIdInfo
 
 var ErrFileOwnership = errors.New("could not update file ownership")
 
+// writeSecretIdFile replaces the secret_id file atomically: the secret_id is written to a temporary file that gets
+// the file's mode and ownership before it is renamed, so readers never see a partially written secret_id or a file
+// they are not allowed to read. Without a configured user, the ownership and mode of the existing file are kept.
 func (a *ApproleSecretIdRotatorService) writeSecretIdFile(newSecretId string, cnf vault_config.Vault) error {
-	if err := afero.WriteFile(a.fsImpl, cnf.SecretIdFile, []byte(newSecretId), 0600); err != nil {
-		return err
+	mode := os.FileMode(0600)
+	uid, gid, chown := -1, -1, false
+	if info, err := a.fsImpl.Stat(cnf.SecretIdFile); err == nil {
+		mode = info.Mode().Perm()
+		uid, gid, chown = fileOwner(info)
 	}
 
 	if cnf.SecretIdFileUser != "" && runtime.GOOS != "windows" {
@@ -267,14 +280,52 @@ func (a *ApproleSecretIdRotatorService) writeSecretIdFile(newSecretId string, cn
 		if err != nil {
 			return fmt.Errorf("%w: could not lookup user %s", ErrFileOwnership, cnf.SecretIdFileUser)
 		}
+		uid, _ = strconv.Atoi(usr.Uid)
+		gid, chown = 0, true
+	}
 
-		uid, _ := strconv.Atoi(usr.Uid)
-		if err := os.Chown(cnf.SecretIdFile, uid, 0); err != nil {
+	tmp, err := afero.TempFile(a.fsImpl, filepath.Dir(cnf.SecretIdFile), "."+filepath.Base(cnf.SecretIdFile)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	// no-op after the rename succeeded
+	defer func() {
+		_ = a.fsImpl.Remove(tmpName)
+	}()
+
+	if _, err := tmp.WriteString(newSecretId); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+
+	if err := a.fsImpl.Chmod(tmpName, mode); err != nil {
+		return err
+	}
+	if chown && !a.ownedBy(tmpName, uid, gid) {
+		if err := a.fsImpl.Chown(tmpName, uid, gid); err != nil {
 			return fmt.Errorf("%w: %w", ErrFileOwnership, err)
 		}
 	}
 
-	return nil
+	return a.fsImpl.Rename(tmpName, cnf.SecretIdFile)
+}
+
+// ownedBy reports whether the file is already owned by uid and gid, so no privileges are needed to keep its ownership.
+func (a *ApproleSecretIdRotatorService) ownedBy(file string, uid, gid int) bool {
+	info, err := a.fsImpl.Stat(file)
+	if err != nil {
+		return false
+	}
+	fileUid, fileGid, ok := fileOwner(info)
+	return ok && fileUid == uid && fileGid == gid
 }
 
 func (a *ApproleSecretIdRotatorService) readSecretId(secretIdFile string) (string, error) {
