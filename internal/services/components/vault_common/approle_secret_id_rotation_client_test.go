@@ -1,6 +1,7 @@
 package vault_common
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -8,8 +9,9 @@ import (
 )
 
 type fakeVaultClient struct {
-	listResp  map[string]*api.Secret
-	listPaths []string
+	listResp   map[string]*api.Secret
+	listPaths  []string
+	writePaths []string
 }
 
 func (f *fakeVaultClient) List(path string) (*api.Secret, error) {
@@ -22,7 +24,59 @@ func (f *fakeVaultClient) Read(path string) (*api.Secret, error) {
 }
 
 func (f *fakeVaultClient) Write(path string, data map[string]any) (*api.Secret, error) {
-	return nil, nil
+	f.writePaths = append(f.writePaths, path)
+	return &api.Secret{Data: map[string]any{"secret_id": "new-secret-id"}}, nil
+}
+
+type fakeCidrResolver struct {
+	cidrs []string
+	err   error
+}
+
+func (f *fakeCidrResolver) GetCidr() ([]string, error) {
+	return f.cidrs, f.err
+}
+
+func TestApproleSecretIdRotatorClient_GenerateSecretIdFailsClosed(t *testing.T) {
+	failing := &fakeCidrResolver{err: errors.New("local address 127.0.0.1 is a loopback address")}
+	working := &fakeCidrResolver{cidrs: []string{"192.168.1.10/32"}}
+
+	tests := []struct {
+		name          string
+		cidrList      CidrResolver
+		tokenCidrList CidrResolver
+		wantErr       bool
+	}{
+		{name: "no resolvers"},
+		{name: "working resolvers", cidrList: working, tokenCidrList: working},
+		{name: "cidr list resolver fails", cidrList: failing, tokenCidrList: working, wantErr: true},
+		{name: "token cidr list resolver fails", cidrList: working, tokenCidrList: failing, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vaultClient := &fakeVaultClient{}
+			client, err := NewClient(vaultClient, "approle")
+			if err != nil {
+				t.Fatal(err)
+			}
+			client.cidrListResolver = tt.cidrList
+			client.tokenCidrResolver = tt.tokenCidrList
+
+			secretId, err := client.GenerateSecretId("restic")
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("GenerateSecretId() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				if len(vaultClient.writePaths) != 0 {
+					t.Fatalf("expected no secret_id to be created, got writes to %v", vaultClient.writePaths)
+				}
+				return
+			}
+			if secretId != "new-secret-id" {
+				t.Fatalf("unexpected secret_id %q", secretId)
+			}
+		})
+	}
 }
 
 func TestApproleSecretIdRotatorClient_GetSecretIdAccessors(t *testing.T) {

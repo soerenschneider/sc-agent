@@ -143,8 +143,13 @@ func (a *ApproleSecretIdRotatorClient) GetSecretIdAccessors(roleName string) ([]
 }
 
 func (a *ApproleSecretIdRotatorClient) GenerateSecretId(roleName string) (string, error) {
+	data, err := a.generateSecretIdRotationData()
+	if err != nil {
+		return "", err
+	}
+
 	path := fmt.Sprintf("auth/%s/role/%s/secret-id", a.mountPath, roleName)
-	resp, err := a.client.Write(path, a.generateSecretIdRotationData())
+	resp, err := a.client.Write(path, data)
 	if err != nil {
 		return "", fmt.Errorf("unable to create new secret_id: %w", err)
 	}
@@ -195,28 +200,28 @@ func getMetadata() string {
 	return string(marshalled)
 }
 
-func (a *ApproleSecretIdRotatorClient) generateSecretIdRotationData() map[string]any {
+// generateSecretIdRotationData returns the parameters for a new secret_id. Errors resolving the CIDRs are returned
+// instead of creating a secret_id without the configured CIDR binding.
+func (a *ApproleSecretIdRotatorClient) generateSecretIdRotationData() (map[string]any, error) {
 	data := map[string]any{
 		"metadata": getMetadata(),
 	}
 
 	cidrList, err := a.getCidrList()
 	if err != nil {
-		log.Error().Err(err).Str(logComponent, approleComponentName).Msgf("could not generate cidr list")
-	} else {
-		data["cidr_list"] = cidrList
+		return nil, fmt.Errorf("could not resolve cidr list: %w", err)
 	}
+	data["cidr_list"] = cidrList
 
 	tokenCidrList, err := a.getTokenCidrList()
 	if err != nil {
-		log.Error().Err(err).Str(logComponent, approleComponentName).Msgf("could not generate token cidr list")
-	} else {
-		data["token_bound_cidrs"] = tokenCidrList
+		return nil, fmt.Errorf("could not resolve token cidr list: %w", err)
 	}
+	data["token_bound_cidrs"] = tokenCidrList
 
 	if a.ttl != "" {
 		data["ttl"] = a.ttl
 	}
 
-	return data
+	return data, nil
 }
