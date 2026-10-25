@@ -3,12 +3,6 @@ package vault_common
 import (
 	"context"
 	"errors"
-	"fmt"
-	"os"
-	"os/user"
-	"path/filepath"
-	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
 	vault_config "github.com/soerenschneider/sc-agent/internal/config/vault"
+	"github.com/soerenschneider/sc-agent/internal/fsutil"
 	"github.com/soerenschneider/sc-agent/internal/metrics"
 	"github.com/soerenschneider/sc-agent/pkg/vault"
 	"github.com/spf13/afero"
@@ -262,70 +257,10 @@ func (a *ApproleSecretIdRotatorService) untilRotationDue(info vault.SecretIdInfo
 	return rotationDue.Sub(a.now())
 }
 
-var ErrFileOwnership = errors.New("could not update file ownership")
+var ErrFileOwnership = fsutil.ErrFileOwnership
 
-// writeSecretIdFile replaces the secret_id file atomically: the secret_id is written to a temporary file that gets
-// the file's mode and ownership before it is renamed, so readers never see a partially written secret_id or a file
-// they are not allowed to read. Without a configured user, the ownership and mode of the existing file are kept.
 func (a *ApproleSecretIdRotatorService) writeSecretIdFile(newSecretId string, cnf vault_config.Vault) error {
-	mode := os.FileMode(0600)
-	uid, gid, chown := -1, -1, false
-	if info, err := a.fsImpl.Stat(cnf.SecretIdFile); err == nil {
-		mode = info.Mode().Perm()
-		uid, gid, chown = fileOwner(info)
-	}
-
-	if cnf.SecretIdFileUser != "" && runtime.GOOS != "windows" {
-		usr, err := user.Lookup(cnf.SecretIdFileUser)
-		if err != nil {
-			return fmt.Errorf("%w: could not lookup user %s", ErrFileOwnership, cnf.SecretIdFileUser)
-		}
-		uid, _ = strconv.Atoi(usr.Uid)
-		gid, chown = 0, true
-	}
-
-	tmp, err := afero.TempFile(a.fsImpl, filepath.Dir(cnf.SecretIdFile), "."+filepath.Base(cnf.SecretIdFile)+".tmp-*")
-	if err != nil {
-		return err
-	}
-	tmpName := tmp.Name()
-	// no-op after the rename succeeded
-	defer func() {
-		_ = a.fsImpl.Remove(tmpName)
-	}()
-
-	if _, err := tmp.WriteString(newSecretId); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Sync(); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-
-	if err := a.fsImpl.Chmod(tmpName, mode); err != nil {
-		return err
-	}
-	if chown && !a.ownedBy(tmpName, uid, gid) {
-		if err := a.fsImpl.Chown(tmpName, uid, gid); err != nil {
-			return fmt.Errorf("%w: %w", ErrFileOwnership, err)
-		}
-	}
-
-	return a.fsImpl.Rename(tmpName, cnf.SecretIdFile)
-}
-
-// ownedBy reports whether the file is already owned by uid and gid, so no privileges are needed to keep its ownership.
-func (a *ApproleSecretIdRotatorService) ownedBy(file string, uid, gid int) bool {
-	info, err := a.fsImpl.Stat(file)
-	if err != nil {
-		return false
-	}
-	fileUid, fileGid, ok := fileOwner(info)
-	return ok && fileUid == uid && fileGid == gid
+	return fsutil.WriteFileAtomic(a.fsImpl, cnf.SecretIdFile, []byte(newSecretId), cnf.SecretIdFileUser)
 }
 
 func (a *ApproleSecretIdRotatorService) readSecretId(secretIdFile string) (string, error) {

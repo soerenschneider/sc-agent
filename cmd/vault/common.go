@@ -227,6 +227,9 @@ func buildVaultAuth(conf vault_config.Vault) (vault.AuthMethod, error) {
 		if conf.MountApprole != "" {
 			loginOpts = append(loginOpts, auth.WithMountPath(conf.MountApprole))
 		}
+		if conf.SecretIdFileUser != "" {
+			loginOpts = append(loginOpts, auth.WithSecretIDFileOwner(conf.SecretIdFileUser))
+		}
 
 		isWrappedToken, err := pkg_vault.ContainsFileWrappedToken(conf.SecretIdFile)
 		// a missing secret_id file is fetched from approle-courier on login

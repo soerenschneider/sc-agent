@@ -1,6 +1,6 @@
 //go:build !unix
 
-package vault_common
+package fsutil
 
 import (
 	"os"

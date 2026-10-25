@@ -18,6 +18,7 @@ import (
 	"filippo.io/age"
 	"filippo.io/age/armor"
 	"github.com/hashicorp/vault/api"
+	"github.com/soerenschneider/sc-agent/internal/fsutil"
 )
 
 //nolint:gosec // test fixtures, not credentials
@@ -451,5 +452,18 @@ func TestLogin_FailsIfSecretIdFileIsNotWritable(t *testing.T) {
 	}
 	if env.bootstrap.secretIds != 1 {
 		t.Fatalf("expected exactly one bootstrapped secret_id, got %d", env.bootstrap.secretIds)
+	}
+}
+
+func TestLogin_WritesSecretIdFileForOwner(t *testing.T) {
+	env := newTestEnv(t)
+	a := env.appRoleAuth(t, WithSecretIDFileOwner("sc-agent-no-such-user"))
+
+	_, err := a.Login(context.Background(), env.client)
+	if !errors.Is(err, fsutil.ErrFileOwnership) {
+		t.Fatalf("expected the configured owner to be applied, got %v", err)
+	}
+	if _, err := os.Stat(env.secretIdFile); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected no secret_id file without the configured owner, got %v", err)
 	}
 }

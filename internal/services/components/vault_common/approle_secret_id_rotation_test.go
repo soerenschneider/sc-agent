@@ -5,8 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -352,56 +350,5 @@ func TestConditionallyRotateSecretId_CountsLookupErrors(t *testing.T) {
 	}
 	if client.generated != 0 {
 		t.Fatalf("expected no secret_id to be generated, got %d", client.generated)
-	}
-}
-
-func TestWriteSecretIdFile(t *testing.T) {
-	tests := []struct {
-		name string
-		// existingMode is the mode of the existing secret_id file, 0 if there is none
-		existingMode os.FileMode
-		wantMode     os.FileMode
-	}{
-		{name: "new file", wantMode: 0600},
-		{name: "keeps mode of existing file", existingMode: 0640, wantMode: 0640},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dir := t.TempDir()
-			secretIdFile := filepath.Join(dir, "secret-id")
-			if tt.existingMode != 0 {
-				if err := os.WriteFile(secretIdFile, []byte("old-secret-id"), tt.existingMode); err != nil {
-					t.Fatal(err)
-				}
-				// not affected by the umask
-				if err := os.Chmod(secretIdFile, tt.existingMode); err != nil {
-					t.Fatal(err)
-				}
-			}
-			rotator, conf := newTestRotator(t, &fakeApproleClient{}, afero.NewOsFs(), secretIdFile)
-
-			if err := rotator.writeSecretIdFile("new-secret-id", conf); err != nil {
-				t.Fatalf("writeSecretIdFile() unexpected error: %v", err)
-			}
-
-			data, err := os.ReadFile(secretIdFile)
-			if err != nil || string(data) != "new-secret-id" {
-				t.Fatalf("expected new secret_id, got %q (%v)", data, err)
-			}
-			info, err := os.Stat(secretIdFile)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if info.Mode().Perm() != tt.wantMode {
-				t.Fatalf("expected mode %v, got %v", tt.wantMode, info.Mode().Perm())
-			}
-			entries, err := os.ReadDir(dir)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(entries) != 1 {
-				t.Fatalf("expected no temporary files to be left, got %v", entries)
-			}
-		})
 	}
 }

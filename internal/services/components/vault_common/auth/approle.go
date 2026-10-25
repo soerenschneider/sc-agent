@@ -12,6 +12,8 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/rs/zerolog/log"
+	"github.com/soerenschneider/sc-agent/internal/fsutil"
+	"github.com/spf13/afero"
 )
 
 type AppRoleAuth struct {
@@ -19,8 +21,10 @@ type AppRoleAuth struct {
 	roleID       string
 	secretID     string
 	secretIDFile string
-	secretIDEnv  string
-	unwrap       bool
+	// secretIDFileOwner is the user the secret_id file is written for, the existing file's owner is kept if empty
+	secretIDFileOwner string
+	secretIDEnv       string
+	unwrap            bool
 	// unwrapped is set once the wrapping token was successfully unwrapped, so failed attempts are retried on the
 	// next login
 	unwrapped    bool
@@ -216,7 +220,7 @@ func (a *AppRoleAuth) unwrapSecretID(ctx context.Context, client *api.Client, wr
 	if a.secretIDFile != "" {
 		log.Info().Str("component", "vault").Str("secret_id_file", a.secretIDFile).Msg("Writing unwrapped secret_id to file")
 		data := []byte(secretIDValue)
-		if err := os.WriteFile(a.secretIDFile, data, 0600); err != nil { //nolint:gosec // G703: the path is taken from the agent's own config
+		if err := fsutil.WriteFileAtomic(afero.NewOsFs(), a.secretIDFile, data, a.secretIDFileOwner); err != nil {
 			return "", fmt.Errorf("could not write unwrapped secret_id to file: %w", err)
 		}
 	} else if a.secretIDEnv != "" {
@@ -286,6 +290,14 @@ func WithBootstrapper(b *SecretIdBootstrapper) LoginOption {
 			return errors.New("empty bootstrapper passed")
 		}
 		a.bootstrapper = b
+		return nil
+	}
+}
+
+// WithSecretIDFileOwner sets the user the unwrapped secret_id file is written for.
+func WithSecretIDFileOwner(owner string) LoginOption {
+	return func(a *AppRoleAuth) error {
+		a.secretIDFileOwner = owner
 		return nil
 	}
 }
