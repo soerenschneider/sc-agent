@@ -365,7 +365,8 @@ func readConfigFiles(dir string) ([]map[string]interface{}, error) {
 		}
 		if filepath.Ext(path) == ".yaml" || filepath.Ext(path) == ".yml" {
 			log.Info().Msgf("reading config file from %q", path)
-			data, err := os.ReadFile(path)
+			// the config dir is controlled by the operator, symlinks to config files elsewhere are allowed
+			data, err := os.ReadFile(path) //nolint:gosec // G122: see above
 			if err != nil {
 				return err
 			}
