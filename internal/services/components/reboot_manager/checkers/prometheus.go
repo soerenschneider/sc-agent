@@ -142,7 +142,7 @@ func (c *PrometheusChecker) IsHealthy(ctx context.Context) (bool, error) {
 }
 
 func (c *PrometheusChecker) query(ctx context.Context, name, query string) (bool, error) {
-	result, warnings, err := c.client.Query(ctx, query, time.Now(), v1.WithTimeout(15*time.Second))
+	result, warnings, infos, err := c.client.Query(ctx, query, time.Now(), v1.WithTimeout(15*time.Second))
 	if err != nil {
 		// keep track how long we receive errors
 		now := time.Now()
@@ -155,8 +155,14 @@ func (c *PrometheusChecker) query(ctx context.Context, name, query string) (bool
 	if len(warnings) > 0 {
 		log.Warn().Str("component", "reboot-manager").Str("checker", "prometheus").Msgf("warning for query '%s': %v", name, warnings)
 	}
+	if len(infos) > 0 {
+		log.Debug().Str("component", "reboot-manager").Str("checker", "prometheus").Msgf("info for query '%s': %v", name, infos)
+	}
 
-	vec := result.(model.Vector)
+	vec, ok := result.(model.Vector)
+	if !ok {
+		return false, fmt.Errorf("query '%s' returned %s, expected a vector", name, result.Type())
+	}
 	return c.evaluateResponse(len(vec)), nil
 }
 
