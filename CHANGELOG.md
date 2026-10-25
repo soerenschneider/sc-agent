@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.14.0](https://github.com/soerenschneider/sc-agent/compare/v1.13.1...v1.14.0) (2026-10-25)
+
+
+### Features
+
+* add caller-facing error categories and return them via mqtt ([59cbd3e](https://github.com/soerenschneider/sc-agent/commit/59cbd3e4c8a8ff60a1691b11aafd58f5d06b349a))
+* initial support for bootstrapping approle secret_ids ([e40aa5a](https://github.com/soerenschneider/sc-agent/commit/e40aa5ae02be52e7472f0a82773145e0493819f3))
+* **mqtt:** add packages/updates topic and reuse http DTOs for responses ([1fcc964](https://github.com/soerenschneider/sc-agent/commit/1fcc964806890235e9844079573789eb27c8bb36))
+* **nftables:** add elements to predefined nftables sets via http and mqtt ([ffdccfb](https://github.com/soerenschneider/sc-agent/commit/ffdccfb3d1d11b66173f2814e637ebd30db55c19))
+* run in degraded mode when components fail to build ([30bb868](https://github.com/soerenschneider/sc-agent/commit/30bb8681301fe63bdd0bb9ee99e48c1583a27294))
+* support go templates for secret syncing ([978fa4c](https://github.com/soerenschneider/sc-agent/commit/978fa4cb27a661f666e841f8ace9fb1ec58b1d5b))
+* **vault:** add rotation-only clients that log in on demand ([e321bd0](https://github.com/soerenschneider/sc-agent/commit/e321bd0619c62fa33bdebb0aeedfdbfdd20e36e4))
+* **vault:** retry logins indefinitely and start vault components per client ([71b6bd7](https://github.com/soerenschneider/sc-agent/commit/71b6bd79292501732f981d2f4415c72cec919151))
+
+
+### Bug Fixes
+
+* allow using identical kv2 path for multiple secret sync requests ([4eabe20](https://github.com/soerenschneider/sc-agent/commit/4eabe20adbf8adece9113d1540c8a2b96caa439d))
+* **deps:** adapt to prometheus client_golang v1.25 and pin oapi-codegen's yaml dependencies ([d468dd7](https://github.com/soerenschneider/sc-agent/commit/d468dd77c84da67d0831bfc19d9bfaf74fb74780))
+* **deps:** bump amqp091-go to v1.14.0 to fix CVEs ([930c081](https://github.com/soerenschneider/sc-agent/commit/930c081a9e5f536b089ab76c6cbcc1978370f01e))
+* **deps:** bump oapi-codegen to v2.8.1 for kin-openapi v0.149.0 compatibility ([a973cd4](https://github.com/soerenschneider/sc-agent/commit/a973cd4ad830e75acd45f4aa788e485342f3e557))
+* **openbao:** support openbao wrapped secrets ([65f8344](https://github.com/soerenschneider/sc-agent/commit/65f83440be77f277259f30298517361ddee67efa))
+* **secret-replication:** sort env var keys and format non-string values ([a2fd522](https://github.com/soerenschneider/sc-agent/commit/a2fd5224621e8839cd0a696cb9789aa07852e0dc))
+* **vault:** add role_name instead of assuming role_name equals role_id ([45524b1](https://github.com/soerenschneider/sc-agent/commit/45524b14bd53f4c918766be147a8a9df90142658))
+* **vault:** fail closed if cidr resolvers fail when generating secret_ids ([33ba843](https://github.com/soerenschneider/sc-agent/commit/33ba843aa00f2e83ef4e1207f88b6cc13438dba6))
+* **vault:** fix cidr resolvers for loopback, ipv6 and yaml config ([e2cfef6](https://github.com/soerenschneider/sc-agent/commit/e2cfef6b4d6dff12d16739acd2575fcf15cf6520))
+* **vault:** retry transient bootstrap failures sooner ([fad06f0](https://github.com/soerenschneider/sc-agent/commit/fad06f0e473c7a688c727bd6e049036bc7715f56))
+* **vault:** retry unwrapping approle secret_id after failed attempts ([133fda4](https://github.com/soerenschneider/sc-agent/commit/133fda45bc7072d7355f75f4322e7db6ce5be456))
+* **vault:** use configured approle mount when listing secret_id accessors ([18c8157](https://github.com/soerenschneider/sc-agent/commit/18c815776471e400e0bb1bbb340b876cc79b5217))
+* **vault:** verify token auth and respect TTL of non-renewable tokens ([61d13b6](https://github.com/soerenschneider/sc-agent/commit/61d13b64b70074811e410a9e7e1fdbcbda19142b))
+* **vault:** write secret_id file atomically and destroy unused secret_ids ([c69bab7](https://github.com/soerenschneider/sc-agent/commit/c69bab7294c9d81823b1f09c728e8eae63504d2e))
+* **vault:** write unwrapped secret_id atomically and for the configured owner ([6a1035a](https://github.com/soerenschneider/sc-agent/commit/6a1035a672f394ad2247f37cb152f58b13e21107))
+
 ## [1.13.1](https://github.com/soerenschneider/sc-agent/compare/v1.13.0...v1.13.1) (2026-01-26)
 
 
