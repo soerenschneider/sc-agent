@@ -216,7 +216,7 @@ func (a *AppRoleAuth) unwrapSecretID(ctx context.Context, client *api.Client, wr
 	if a.secretIDFile != "" {
 		log.Info().Str("component", "vault").Str("secret_id_file", a.secretIDFile).Msg("Writing unwrapped secret_id to file")
 		data := []byte(secretIDValue)
-		if err := os.WriteFile(a.secretIDFile, data, 0600); err != nil {
+		if err := os.WriteFile(a.secretIDFile, data, 0600); err != nil { //nolint:gosec // G703: the path is taken from the agent's own config
 			return "", fmt.Errorf("could not write unwrapped secret_id to file: %w", err)
 		}
 	} else if a.secretIDEnv != "" {
