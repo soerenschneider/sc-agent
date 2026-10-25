@@ -1,13 +1,16 @@
-FROM golang:1.25.6 AS build
+# keep in sync with the toolchain in go.mod, otherwise the Makefile downloads the pinned toolchain during the build
+FROM golang:1.27.3 AS build
+
+ARG VERSION=dev
+ARG COMMIT_HASH=unknown
 
 WORKDIR /src
 COPY ./go.mod ./go.sum ./
 RUN go mod download
 
 COPY ./ ./
-ENV CGO_ENABLED=0
-RUN go mod download
-RUN CGO_ENABLED=0 go build -o /sc-agent ./cmd
+# use the same build flags as release binaries built with the Makefile
+RUN make compile VERSION="${VERSION}" COMMIT_HASH="${COMMIT_HASH}" OUTPUT=/sc-agent
 
 
 FROM gcr.io/distroless/static AS final

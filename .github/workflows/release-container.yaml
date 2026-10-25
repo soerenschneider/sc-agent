@@ -18,6 +18,9 @@ name: release
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - uses: GoogleCloudPlatform/release-please-action@v4.4.0
         name: release
@@ -55,4 +58,39 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.release.outputs.tag_name }}
+            COMMIT_HASH=${{ github.sha }}
         if: ${{ steps.release.outputs.release_created }}
+
+  binaries:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # keyless signing with cosign uses the workflow's OIDC token
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          # the version is read from the tags
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Build release binaries and checksums
+        run: make release
+
+      - uses: sigstore/cosign-installer@v4.1.2
+
+      - name: Sign checksums
+        run: cosign sign-blob --yes --bundle builds/checksum.sha256.sigstore.json builds/checksum.sha256
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.release-please.outputs.tag_name }}" builds/* --clobber

@@ -4,6 +4,7 @@ BINARY_NAME = sc-agent
 CHECKSUM_FILE = $(BUILD_DIR)/checksum.sha256
 SIGNATURE_KEYFILE = ~/.signify/github.sec
 DOCKER_PREFIX = ghcr.io/soerenschneider
+OUTPUT = $(BINARY_NAME)
 
 # Reproducible builds: use the exact toolchain pinned in go.mod instead of whatever Go is installed, strip local paths
 # and ignore GOFLAGS from the environment.
@@ -26,8 +27,13 @@ clean:
 build: version-info generate
 	$(GO_BUILD) -o $(BINARY_NAME) ./cmd
 
+# compile only runs the build without generating code or reading version info from git, it is used by the Dockerfile.
+# VERSION and COMMIT_HASH must be passed.
+compile:
+	$(GO_BUILD) -o $(OUTPUT) ./cmd
+
 release: clean version-info cross-build
-	sha256sum $(BUILD_DIR)/sc-agent-* > $(CHECKSUM_FILE)
+	cd $(BUILD_DIR) && sha256sum $(BINARY_NAME)-* > $(notdir $(CHECKSUM_FILE))
 
 signed-release: release
 	pass keys/signify/github | signify -S -s $(SIGNATURE_KEYFILE) -m $(CHECKSUM_FILE)
@@ -42,8 +48,8 @@ cross-build: version-info
 validate-openapi-spec:
 	docker run --rm -it -v $(shell pwd):/tmp stoplight/spectral lint --ruleset "/tmp/.spectral.yaml" "/tmp/openapi.yaml"
 
-docker-build:
-	docker build -t "$(DOCKER_PREFIX)/sc-agent-server" .
+docker-build: version-info
+	docker build --build-arg VERSION=$(VERSION) --build-arg COMMIT_HASH=$(COMMIT_HASH) -t "$(DOCKER_PREFIX)/sc-agent-server" .
 
 version-info:
 	$(eval VERSION := $(shell git describe --tags --abbrev=0 || echo "dev"))

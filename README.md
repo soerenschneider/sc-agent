@@ -62,6 +62,19 @@ A GitHub Actions workflow is in-place that runs code-generation on every commit 
 
 ## Security Considerations
 
+### Verifying releases
+Release binaries are built reproducibly (`make release`). The checksums are signed keylessly with
+[cosign](https://github.com/sigstore/cosign) by the release workflow:
+
+```shell
+cosign verify-blob \
+  --bundle checksum.sha256.sigstore.json \
+  --certificate-identity "https://github.com/soerenschneider/sc-agent/.github/workflows/release-container.yaml@refs/heads/main" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  checksum.sha256
+sha256sum -c --ignore-missing checksum.sha256
+```
+
 ### Authentication
 The default mode is using mTLS to authenticate against the server that serves the REST API. A middleware is available that validates request based on the `CommonName` attribute or `EmailAddresses` attributes of the certificate.
 
