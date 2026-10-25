@@ -3,6 +3,8 @@ package formatter
 import (
 	"bytes"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 )
 
@@ -17,11 +19,13 @@ func NewEnvVarFormatter(uppercaseKeys bool) *EnvVarFormatter {
 func (y *EnvVarFormatter) Format(data map[string]any) ([]byte, error) {
 	var buffer bytes.Buffer
 
-	for key, value := range data {
+	// sort the keys, otherwise the random map order changes the file on every replication
+	for _, key := range slices.Sorted(maps.Keys(data)) {
+		name := key
 		if y.uppercaseKeys {
-			key = strings.ToUpper(key)
+			name = strings.ToUpper(key)
 		}
-		_, _ = buffer.WriteString(fmt.Sprintf("%s=%s\n", key, value))
+		_, _ = fmt.Fprintf(&buffer, "%s=%v\n", name, data[key])
 	}
 
 	return buffer.Bytes(), nil
