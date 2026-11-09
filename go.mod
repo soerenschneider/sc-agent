@@ -28,7 +28,7 @@ require (
 	github.com/segmentio/kafka-go v0.4.51
 	github.com/soerenschneider/soeren.cloud-events v0.0.0-20250423164936-f1e30077892f
 	github.com/spf13/afero v1.15.0
-	github.com/zcalusic/sysinfo v1.2.1
+	github.com/zcalusic/sysinfo v1.2.3
 	gitlab.com/tanna.dev/openapi-doc-http-handler v0.2.0
 	go.uber.org/multierr v1.11.0
 	golang.org/x/crypto v0.58.0
