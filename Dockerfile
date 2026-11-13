@@ -1,5 +1,5 @@
 # keep in sync with the toolchain in go.mod, otherwise the Makefile downloads the pinned toolchain during the build
-FROM golang:1.27.3 AS build
+FROM golang:1.27.4 AS build
 
 ARG VERSION=dev
 ARG COMMIT_HASH=unknown
