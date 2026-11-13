@@ -18,7 +18,7 @@ require (
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/nats-io/nats.go v1.55.0
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.1
-	github.com/oapi-codegen/runtime v1.8.0
+	github.com/oapi-codegen/runtime v1.9.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-community/pro-bing v0.9.1
 	github.com/prometheus/client_golang v1.25.0
